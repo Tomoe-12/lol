@@ -1,0 +1,381 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  OWNER
+  MANAGER
+  CASHIER
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  QR
+  SPLIT
+  DEBT
+}
+
+enum TransactionStatus {
+  COMPLETED
+  VOIDED
+  REFUNDED
+  HELD
+}
+
+enum StockChangeReason {
+  SALE
+  ADJUSTMENT
+  TRANSFER_IN
+  TRANSFER_OUT
+  PURCHASE_RECEIVED
+  SALES_ORDER_DELIVERED
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+enum ExpenseCategory {
+  RENT
+  ELECTRICITY
+  WATER
+  SALARIES
+  SUPPLIES
+  OTHER
+}
+
+enum SalesOrderStatus {
+  DRAFT
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PARTIAL
+  PAID
+}
+
+enum DeliveryStatus {
+  PENDING
+  DELIVERED
+}
+
+// ─── Branch ───────────────────────────────────────────────────────────────────
+
+model Branch {
+  id            String   @id @default(cuid())
+  name          String
+  address       String?
+  receiptHeader String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  staff          Staff[]
+  stockLevels    StockLevel[]
+  transactions   Transaction[]
+  expenses       Expense[]
+  purchaseOrders PurchaseOrder[]
+  inventoryLogs  InventoryLog[]
+  exchangeRates  ExchangeRate[]
+  salesOrders    SalesOrder[]
+}
+
+// ─── Staff ────────────────────────────────────────────────────────────────────
+
+model Staff {
+  id        String   @id @default(cuid())
+  clerkId   String?  @unique
+  password  String   @default("123456")
+  name      String
+  email     String   @unique
+  pin       String?
+  role        Role     @default(CASHIER)
+  permissions Json?
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions  Transaction[]
+  auditLogs     AuditLog[]
+  exchangeRates ExchangeRate[]
+  createdPurchaseOrders  PurchaseOrder[] @relation("POCreatedBy")
+  receivedPurchaseOrders PurchaseOrder[] @relation("POReceivedBy")
+}
+
+// ─── Category ─────────────────────────────────────────────────────────────────
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  createdAt DateTime  @default(now())
+  products  Product[]
+}
+
+// ─── Product ──────────────────────────────────────────────────────────────────
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  price       Float    @default(0)
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  variants         ProductVariant[]
+  transactionItems TransactionItem[]
+}
+
+model ProductVariant {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String   // e.g. "Small", "Medium", "Large"
+  barcode   String   @unique
+  lowStockThreshold Int    @default(10)
+  costPrice         Float  @default(0)
+  createdAt DateTime @default(now())
+
+  transactionItems TransactionItem[]
+  purchaseItems    PurchaseItem[]
+  stockLevels      StockLevel[]
+  inventoryLogs    InventoryLog[]
+  salesOrderItems  SalesOrderItem[]
+}
+
+// ─── Stock ────────────────────────────────────────────────────────────────────
+
+model StockLevel {
+  id                String  @id @default(cuid())
+  branchId          String
+  branch            Branch  @relation(fields: [branchId], references: [id])
+  variantId         String
+  variant           ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  quantity          Int     @default(0)
+
+  @@unique([branchId, variantId])
+}
+
+model InventoryLog {
+  id        String            @id @default(cuid())
+  branchId  String
+  branch    Branch            @relation(fields: [branchId], references: [id])
+  variantId String
+  variant   ProductVariant    @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  change    Int
+  reason    StockChangeReason
+  note      String?
+  createdAt DateTime          @default(now())
+}
+
+// ─── Transaction ──────────────────────────────────────────────────────────────
+
+model Transaction {
+  id            String            @id @default(cuid())
+  branchId      String
+  branch        Branch            @relation(fields: [branchId], references: [id])
+  staffId       String
+  staff         Staff             @relation(fields: [staffId], references: [id])
+  subtotal      Float
+  discountAmount Float            @default(0)
+  total         Float
+  currency      String            @default("MMK")
+  exchangeRate  Float             @default(1)
+  totalInMMK    Float
+  paymentMethod PaymentMethod
+  cashReceived  Float?
+  changeGiven   Float?
+  status        TransactionStatus @default(COMPLETED)
+  note          String?
+  receiptEmail  String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  items TransactionItem[]
+}
+
+model TransactionItem {
+  id        String  @id @default(cuid())
+  transactionId String
+  transaction   Transaction    @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product        @relation(fields: [productId], references: [id])
+  variantId     String?
+  variant       ProductVariant? @relation(fields: [variantId], references: [id])
+  quantity      Int
+  unitPrice     Float
+  unitCost      Float          @default(0)
+  discount      Float          @default(0)
+  total         Float
+  note          String?
+}
+
+// ─── Supplier & Purchase Orders ───────────────────────────────────────────────
+
+model Supplier {
+  id        String          @id @default(cuid())
+  name      String
+  contact   String?
+  email     String?
+  address   String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  purchaseOrders PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  id         String              @id @default(cuid())
+  supplierId String
+  supplier   Supplier            @relation(fields: [supplierId], references: [id])
+  branchId   String
+  branch     Branch              @relation(fields: [branchId], references: [id])
+  createdById String?
+  createdBy   Staff?              @relation("POCreatedBy", fields: [createdById], references: [id])
+  receivedById String?
+  receivedBy  Staff?              @relation("POReceivedBy", fields: [receivedById], references: [id])
+  status     PurchaseOrderStatus @default(DRAFT)
+  totalCost  Float               @default(0)
+  note       String?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  items PurchaseItem[]
+}
+
+model PurchaseItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  variantId       String
+  variant         ProductVariant @relation(fields: [variantId], references: [id])
+  quantity        Int
+  unitCost        Float
+  sellingPrice    Float         @default(0)
+  total           Float
+}
+
+// ─── Expenses ─────────────────────────────────────────────────────────────────
+
+model Expense {
+  id        String          @id @default(cuid())
+  branchId  String
+  branch    Branch          @relation(fields: [branchId], references: [id])
+  category  ExpenseCategory
+  amount    Float
+  currency  String          @default("MMK")
+  note      String?
+  date      DateTime        @default(now())
+  createdAt DateTime        @default(now())
+}
+
+// ─── Exchange Rate ────────────────────────────────────────────────────────────
+
+model ExchangeRate {
+  id          String   @id @default(cuid())
+  mmkPerUsd   Float
+  setByStaffId String
+  setByStaff  Staff    @relation(fields: [setByStaffId], references: [id])
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id])
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+}
+
+// ─── Customers & Sales Orders ─────────────────────────────────────────────────
+
+model Customer {
+  id          String   @id @default(cuid())
+  name        String
+  phone       String?
+  email       String?
+  address     String?
+  creditLimit Float    @default(500000)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  salesOrders SalesOrder[]
+}
+
+model SalesOrder {
+  id            String              @id @default(cuid())
+  branchId      String
+  branch        Branch              @relation(fields: [branchId], references: [id])
+  customerId    String?
+  customer      Customer?           @relation(fields: [customerId], references: [id])
+  status        SalesOrderStatus    @default(CONFIRMED)
+  paymentStatus PaymentStatus       @default(PARTIAL)
+  
+  subtotal      Float               @default(0)
+  discount      Float               @default(0)
+  total         Float               @default(0)
+  amountPaid    Float               @default(0)
+  
+  paymentMethod PaymentMethod?
+  note          String?
+  deliveryDate  DateTime?
+
+  isDelivery           Boolean             @default(false)
+  deliveryStatus       DeliveryStatus      @default(PENDING)
+  deliveryCustomerName String?
+  deliveryPhone        String?
+  deliveryAddress      String?
+  
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  items         SalesOrderItem[]
+  payments      OrderPayment[]
+}
+
+model SalesOrderItem {
+  id           String         @id @default(cuid())
+  salesOrderId String
+  salesOrder   SalesOrder     @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  variantId    String
+  variant      ProductVariant @relation(fields: [variantId], references: [id])
+  quantity     Int
+  unitPrice    Float
+  unitCost     Float          @default(0)
+  discount     Float          @default(0)
+  total        Float
+}
+
+model OrderPayment {
+  id            String         @id @default(cuid())
+  salesOrderId  String
+  salesOrder    SalesOrder     @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  amount        Float
+  method        PaymentMethod
+  note          String?
+  createdAt     DateTime       @default(now())
+}

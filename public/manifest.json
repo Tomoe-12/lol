@@ -1,0 +1,45 @@
+{
+  "name": "POS System — Multi-Branch",
+  "short_name": "POS System",
+  "description": "Multi-Branch Point of Sale Management System for Myanmar Retail",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#6d28d9",
+  "orientation": "any",
+  "lang": "my",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "/icons/icon-48x48.png",   "sizes": "48x48",   "type": "image/png", "purpose": "maskable any" },
+    { "src": "/icons/icon-72x72.png",   "sizes": "72x72",   "type": "image/png", "purpose": "maskable any" },
+    { "src": "/icons/icon-96x96.png",   "sizes": "96x96",   "type": "image/png", "purpose": "maskable any" },
+    { "src": "/icons/icon-128x128.png", "sizes": "128x128", "type": "image/png", "purpose": "maskable any" },
+    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable any" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable any" }
+  ],
+  "shortcuts": [
+    {
+      "name": "POS Terminal",
+      "short_name": "POS",
+      "description": "Open the POS cashier terminal",
+      "url": "/pos",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Open the management dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Inventory",
+      "short_name": "Stock",
+      "description": "Check inventory levels",
+      "url": "/inventory",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

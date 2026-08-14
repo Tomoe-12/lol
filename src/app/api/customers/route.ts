@@ -1,0 +1,84 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper";
+
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
+  try {
+    const { staff, errorResponse } = await getAuthStaff(request);
+    if (errorResponse) return errorResponse;
+    if (!staff) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const permCheck = checkStaffPermission(staff, "salesOrders", "read");
+    if (!permCheck.allowed) {
+      const posCheck = checkStaffPermission(staff, "pos", "read");
+      if (!posCheck.allowed && permCheck.errorResponse) {
+        return permCheck.errorResponse;
+      }
+    }
+
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get("search");
+
+    const customers = await prisma.customer.findMany({
+      where: search
+        ? {
+            OR: [
+              { name: { contains: search } },
+              { phone: { contains: search } },
+            ],
+          }
+        : undefined,
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json(customers);
+  } catch (error) {
+    console.error("Fetch customers error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch customers" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const { staff, errorResponse } = await getAuthStaff(request);
+    if (errorResponse) return errorResponse;
+    if (!staff) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const permCheck = checkStaffPermission(staff, "salesOrders", "write");
+    if (!permCheck.allowed) {
+      const posCheck = checkStaffPermission(staff, "pos", "write");
+      if (!posCheck.allowed && permCheck.errorResponse) {
+        return permCheck.errorResponse;
+      }
+    }
+
+    const body = await request.json();
+    const { name, phone, email, address } = body;
+
+    if (!name) {
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    }
+
+    const customer = await prisma.customer.create({
+      data: {
+        name,
+        phone,
+        email,
+        address,
+      },
+    });
+
+    return NextResponse.json({ success: true, customer });
+  } catch (error) {
+    console.error("Create customer error:", error);
+    return NextResponse.json(
+      { error: "Failed to create customer" },
+      { status: 500 }
+    );
+  }
+}

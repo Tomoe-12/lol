@@ -1,0 +1,156 @@
+"use client"
+
+import * as React from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { useCartStore } from "@/lib/store/useCartStore"
+import { useLanguage } from "@/providers/language-provider"
+import { Check } from "lucide-react"
+import type { Product, Variant } from "@/types/pos"
+
+interface AddonVariantSelectorProps {
+  product: Product | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function AddonVariantSelector({
+  product,
+  isOpen,
+  onClose,
+}: AddonVariantSelectorProps) {
+  const { t } = useLanguage()
+  const addItem = useCartStore((state) => state.addItem)
+  const exchangeRate = useCartStore((state) => state.exchangeRate)
+
+  const [selectedVariant, setSelectedVariant] = React.useState<Variant | null>(null)
+  const [quantity, setQuantity] = React.useState(1)
+
+  // Reset local state when product changes
+  React.useEffect(() => {
+    if (product) {
+      setSelectedVariant(product.variants[0] || null)
+      setQuantity(1)
+    }
+  }, [product])
+
+  if (!product) return null
+
+  const handleAddToCart = () => {
+    if (!selectedVariant && product.variants.length > 0) return
+
+    addItem({
+      product: {
+        id: product.id,
+        name: product.name,
+        imageUrl: product.imageUrl,
+        categoryId: product.categoryId,
+        price: product.price,
+      },
+      selectedVariant,
+      quantity,
+      discount: 0,
+      discountType: "fixed",
+    })
+    onClose()
+  }
+
+  const basePrice = product.price || 0
+  const totalPriceMMK = basePrice * quantity
+  const totalPriceUSD = totalPriceMMK / exchangeRate
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md bg-card border-border">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold flex items-center justify-between text-foreground">
+            <span>{t("Customize Item", "အော်ဒါပြင်ဆင်ရန်")}</span>
+          </DialogTitle>
+          <div className="text-sm text-muted-foreground font-semibold mt-1 flex justify-between">
+            <span>{product.name}</span>
+            <span className="text-primary font-bold">{product.price?.toLocaleString()} Ks</span>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-6 my-4">
+          {/* Variants section (Sizes) */}
+          {product.variants.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                {t("Select Option", "အရွယ်အစား ရွေးချယ်ရန်")}
+              </h3>
+              <div className="grid grid-cols-3 gap-2">
+                {product.variants.map((v) => {
+                  const isSelected = selectedVariant?.id === v.id
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => setSelectedVariant(v)}
+                      className={`relative p-3 rounded-lg border-2 text-left transition-all duration-200 focus:outline-none flex flex-col justify-between h-20 ${
+                        isSelected
+                          ? "border-primary bg-primary/5 text-primary"
+                          : "border-border hover:border-muted-foreground/35 bg-muted/40 text-card-foreground"
+                      }`}
+                    >
+                      <span className="font-medium text-sm leading-tight">{v.name}</span>
+                      {isSelected && (
+                        <div className="absolute top-1.5 right-1.5 h-4 w-4 bg-primary rounded-full flex items-center justify-center">
+                          <Check className="h-3 w-3 text-primary-foreground stroke-[3]" />
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Quantity selector */}
+          <div className="flex items-center justify-between border-t border-b border-border py-4">
+            <span className="text-sm font-semibold text-card-foreground">
+              {t("Quantity", "အရေအတွက်")}
+            </span>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 text-foreground"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              >
+                -
+              </Button>
+              <span className="font-bold text-base text-foreground w-6 text-center">
+                {quantity}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 text-foreground"
+                onClick={() => setQuantity((q) => q + 1)}
+              >
+                +
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="flex-row items-center justify-between gap-4 mt-6">
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground uppercase font-semibold">
+              {t("Total", "စုစုပေါင်း")}
+            </span>
+            <span className="text-lg font-extrabold text-foreground">
+              {totalPriceMMK.toLocaleString()} Ks
+            </span>
+            <span className="text-xs text-muted-foreground font-medium">
+              ≈ ${totalPriceUSD.toFixed(2)} USD
+            </span>
+          </div>
+          <Button onClick={handleAddToCart} size="lg" className="px-8 font-semibold">
+            {t("Add to Cart", "ခြင်းထဲထည့်ရန်")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

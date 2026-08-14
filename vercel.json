@@ -1,0 +1,6 @@
+{
+  "buildCommand": "npx prisma generate && next build",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "regions": ["sin1"]
+}
