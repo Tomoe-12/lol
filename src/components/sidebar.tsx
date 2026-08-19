@@ -211,7 +211,7 @@ export function Sidebar() {
         {!collapsed && (
           <div className="flex flex-col">
             <span className="text-base font-black tracking-wider text-sidebar-foreground leading-none">
-              SMARTOS
+              SMARTPOS
             </span>
             <span className="text-[11px] text-muted-foreground mt-0.5 font-medium">
               {t("Multi-Branch POS & Stock", "ဆိုင်ခွဲပေါင်းစုံ POS & စတော့")}

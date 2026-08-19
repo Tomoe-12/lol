@@ -9,6 +9,8 @@ interface Variant {
   id: string;
   name: string;
   barcode?: string | null;
+  price?: number;
+  costPrice?: number;
   stockLevels?: {
     branchId: string;
     quantity: number;
@@ -56,9 +58,13 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
 
   // Compute available stock factoring real-time active cart items
   const availableStock = Math.max(0, branchStockQuantity - cartQuantity)
-  const basePrice = product.price || 0
   const isOutOfStock = availableStock <= 0
   const firstBarcode = product.variants?.find((v) => v.barcode)?.barcode || null
+
+  const prices = product.variants?.map(v => (v.price && v.price > 0) ? v.price : (product.price || 0)).filter(p => p > 0) || []
+  const minPrice = prices.length > 0 ? Math.min(...prices) : (product.price || 0)
+  const maxPrice = prices.length > 0 ? Math.max(...prices) : (product.price || 0)
+  const hasMultiplePrices = minPrice !== maxPrice && minPrice > 0 && maxPrice > 0
 
   return (
     <button
@@ -120,11 +126,14 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
             )}
             {product.variants && product.variants.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {product.variants.slice(0, 2).map((v) => (
-                  <Badge key={v.id} variant="secondary" className="text-[9px] px-1 py-0 font-medium border-border/50">
-                    {v.name}
-                  </Badge>
-                ))}
+                {product.variants.slice(0, 2).map((v) => {
+                  const vPrice = (v.price && v.price > 0) ? v.price : (product.price || 0)
+                  return (
+                    <Badge key={v.id} variant="secondary" className="text-[9px] px-1 py-0 font-medium border-border/50">
+                      {v.name}{vPrice > 0 ? ` (${vPrice.toLocaleString()} Ks)` : ""}
+                    </Badge>
+                  )
+                })}
                 {product.variants.length > 2 && (
                   <span className="text-[9px] text-muted-foreground font-semibold">
                     +{product.variants.length - 2}
@@ -139,10 +148,10 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
         <div className="pt-2 border-t border-border/60 flex items-center justify-between mt-auto">
           <div className="flex flex-col">
             <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">
-              {t("Price", "ဈေးနှုန်း")}
+              {hasMultiplePrices ? t("From", "စတင်ဈေး") : t("Price", "ဈေးနှုန်း")}
             </span>
             <span className="font-extrabold text-sm text-foreground">
-              {basePrice.toLocaleString()} <span className="text-[11px] font-bold text-muted-foreground">Ks</span>
+              {hasMultiplePrices ? `${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}` : minPrice.toLocaleString()} <span className="text-[11px] font-bold text-muted-foreground">Ks</span>
             </span>
           </div>
 

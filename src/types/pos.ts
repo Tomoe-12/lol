@@ -3,6 +3,7 @@ export interface Variant {
   name: string;
   barcode?: string | null;
   costPrice: number;
+  price?: number;
   lowStockThreshold?: number;
   stockLevels?: {
     branchId: string;

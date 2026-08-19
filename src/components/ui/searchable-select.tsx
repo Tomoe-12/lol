@@ -115,6 +115,8 @@ export function SearchableSelect<T>({
   const popup = open && mounted ? (
     <div 
       ref={popupRef}
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       className={`fixed z-[99999] rounded-md border bg-popover text-popover-foreground shadow-lg outline-none animate-in fade-in-80 pointer-events-auto flex flex-col ${coords.bottom !== undefined ? 'mb-1' : 'mt-1'}`}
       style={{
         top: coords.top,
@@ -136,19 +138,38 @@ export function SearchableSelect<T>({
       </div>
       <div className="flex-1 overflow-y-auto p-1 bg-popover rounded-b-md">
         {filtered.length === 0 ? (
-          <div className="py-6 text-center text-sm">No results found.</div>
+          <div className="py-6 text-center text-sm text-muted-foreground">No results found.</div>
         ) : (
           filtered.map(item => (
             <div 
               // @ts-expect-error - generic id property
               key={item.id}
-              className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
-              // @ts-expect-error - generic id property
-              onClick={() => { onChange(item.id); setOpen(false) }}
+              className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+              onPointerDown={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                // @ts-expect-error - generic id property
+                onChange(item.id)
+                setOpen(false)
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                // @ts-expect-error - generic id property
+                onChange(item.id)
+                setOpen(false)
+              }}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                // @ts-expect-error - generic id property
+                onChange(item.id)
+                setOpen(false)
+              }}
             >
               <Check 
                 // @ts-expect-error - generic id property
-                className={`mr-2 h-4 w-4 ${value === item.id ? "opacity-100" : "opacity-0"}`} 
+                className={`mr-2 h-4 w-4 shrink-0 ${value === item.id ? "opacity-100 text-primary" : "opacity-0"}`} 
               />
               <span className="truncate">{renderItem(item)}</span>
             </div>

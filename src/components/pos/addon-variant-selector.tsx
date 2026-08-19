@@ -55,7 +55,9 @@ export function AddonVariantSelector({
     onClose()
   }
 
-  const basePrice = product.price || 0
+  const basePrice = (selectedVariant?.price && selectedVariant.price > 0)
+    ? selectedVariant.price
+    : (product.price || 0)
   const totalPriceMMK = basePrice * quantity
   const totalPriceUSD = totalPriceMMK / exchangeRate
 
@@ -68,7 +70,7 @@ export function AddonVariantSelector({
           </DialogTitle>
           <div className="text-sm text-muted-foreground font-semibold mt-1 flex justify-between">
             <span>{product.name}</span>
-            <span className="text-primary font-bold">{product.price?.toLocaleString()} Ks</span>
+            <span className="text-primary font-bold">{basePrice.toLocaleString()} Ks</span>
           </div>
         </DialogHeader>
 
@@ -79,9 +81,10 @@ export function AddonVariantSelector({
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                 {t("Select Option", "အရွယ်အစား ရွေးချယ်ရန်")}
               </h3>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {product.variants.map((v) => {
                   const isSelected = selectedVariant?.id === v.id
+                  const variantPrice = (v.price && v.price > 0) ? v.price : (product.price || 0)
                   return (
                     <button
                       key={v.id}
@@ -92,7 +95,10 @@ export function AddonVariantSelector({
                           : "border-border hover:border-muted-foreground/35 bg-muted/40 text-card-foreground"
                       }`}
                     >
-                      <span className="font-medium text-sm leading-tight">{v.name}</span>
+                      <span className="font-bold text-sm leading-tight truncate">{v.name}</span>
+                      <span className={`text-xs font-extrabold ${isSelected ? "text-primary" : "text-muted-foreground"}`}>
+                        {variantPrice.toLocaleString()} Ks
+                      </span>
                       {isSelected && (
                         <div className="absolute top-1.5 right-1.5 h-4 w-4 bg-primary rounded-full flex items-center justify-center">
                           <Check className="h-3 w-3 text-primary-foreground stroke-[3]" />

@@ -20,8 +20,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "SMARTOS — Multi-Branch POS & Stock Management",
-    template: "%s | SMARTOS",
+    default: "SMARTPOS — Multi-Branch POS & Stock Management",
+    template: "%s | SMARTPOS",
   },
   description:
     "Multi-branch Point of Sale Management System for Myanmar retail businesses. Manage inventory, staff, sales and reports across all branches.",

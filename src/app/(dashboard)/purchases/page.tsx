@@ -28,13 +28,15 @@ interface ProductVariant {
   productId: string
   name: string
   barcode: string
+  costPrice?: number
+  price?: number
 }
 
 interface Product {
   id: string
   name: string
-  costPrice: number
-  price: number
+  costPrice?: number
+  price?: number
   variants: ProductVariant[]
 }
 
@@ -161,9 +163,9 @@ export default function PurchasesPage() {
   }
 
   const updateFormItem = (index: number, field: string, value: string | number) => {
-    const next = [...formItems]
-    next[index] = { ...next[index], [field]: value }
-    setFormItems(next)
+    setFormItems(prev => prev.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, [field]: value } : item
+    ))
   }
 
   const removeFormItem = (index: number) => {
@@ -178,6 +180,7 @@ export default function PurchasesPage() {
       (p.variants || []).map(v => ({
         ...v,
         productName: p.name,
+        productPrice: p.price,
         searchStr: `${p.name} ${v.name} ${v.barcode}`.toLowerCase()
       }))
     )
@@ -435,16 +438,6 @@ export default function PurchasesPage() {
                   filterItem={(s, search) => s.name.toLowerCase().includes(search)}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">{t("Select Supplier", "ပေးသွင်းသူ ရွေးချယ်ပါ")}</label>
-                <select 
-                  className="w-full h-10 px-3 rounded-md border bg-card"
-                  value={newSupplierId}
-                  onChange={e => setNewSupplierId(e.target.value)}
-                >
-                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
 
               {role === "OWNER" && (
                 <div className="space-y-2">
@@ -491,7 +484,19 @@ export default function PurchasesPage() {
                     <SearchableSelect 
                       items={allVariants}
                       value={item.variantId}
-                      onChange={(val) => updateFormItem(index, "variantId", val)}
+                      onChange={(val) => {
+                        updateFormItem(index, "variantId", val)
+                        const found = allVariants.find(v => v.id === val)
+                        if (found) {
+                          if (found.costPrice !== undefined && found.costPrice > 0) {
+                            updateFormItem(index, "unitCost", found.costPrice)
+                          }
+                          const sell = (found.price && found.price > 0) ? found.price : (found.productPrice || 0)
+                          if (sell > 0) {
+                            updateFormItem(index, "sellingPrice", sell)
+                          }
+                        }
+                      }}
                       placeholder={t("Search product or barcode...", "ပစ္စည်း သို့မဟုတ် ဘားကုဒ် ရှာဖွေပါ...")}
                       searchPlaceholder={t("Search product, variant, or barcode...", "ပစ္စည်း သို့မဟုတ် ဘားကုဒ် ရှာဖွေပါ...")}
                       renderItem={(v) => `${v.productName} - ${v.name} [${v.barcode}]`}

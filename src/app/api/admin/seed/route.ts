@@ -87,14 +87,14 @@ export async function POST(req: Request) {
     const allBranches = [hledan, tamwe, sch, mdl];
 
     // Owner
-    const owner = await prisma.staff.create({ data: { clerkId: "user_owner_dummy", name: "Owner Han", email: "owner@smartos.com", password: "owner123", pin: "9999", role: Role.OWNER, branchId: hledan.id } });
+    const owner = await prisma.staff.create({ data: { clerkId: "user_owner_dummy", name: "Owner Han", email: "owner@smartpos.com", password: "owner123", pin: "9999", role: Role.OWNER, branchId: hledan.id } });
     // Managers
-    const mgrHl    = await prisma.staff.create({ data: { clerkId: "user_mgr_hl",     name: "Kyaw Kyaw",   email: "manager@smartos.com", password: "manager123", pin: "2201", role: Role.MANAGER, branchId: hledan.id } });
+    const mgrHl    = await prisma.staff.create({ data: { clerkId: "user_mgr_hl",     name: "Kyaw Kyaw",   email: "manager@smartpos.com", password: "manager123", pin: "2201", role: Role.MANAGER, branchId: hledan.id } });
     const mgrTw    = await prisma.staff.create({ data: { clerkId: "user_mgr_tw",     name: "Thida Maung", email: "thidamaung@pos.com", pin: "2202", role: Role.MANAGER, branchId: tamwe.id } });
     const mgrSch   = await prisma.staff.create({ data: { clerkId: "user_mgr_sch",    name: "Myo Min Aung",email: "myominaung@pos.com", pin: "2203", role: Role.MANAGER, branchId: sch.id } });
     const mgrMdl   = await prisma.staff.create({ data: { clerkId: "user_mgr_mdl",    name: "Aye Aye Khin",email: "ayeayekhin@pos.com", pin: "2204", role: Role.MANAGER, branchId: mdl.id } });
     // Cashiers
-    const cHl1 = await prisma.staff.create({ data: { clerkId: "user_c_hl1", name: "Su Su",    email: "cashier@smartos.com", password: "cashier123", pin: "1101", role: Role.CASHIER, branchId: hledan.id } });
+    const cHl1 = await prisma.staff.create({ data: { clerkId: "user_c_hl1", name: "Su Su",    email: "cashier@smartpos.com", password: "cashier123", pin: "1101", role: Role.CASHIER, branchId: hledan.id } });
     const cHl2 = await prisma.staff.create({ data: { clerkId: "user_c_hl2", name: "Zin Mar",  email: "zinmar@pos.com",  pin: "1102", role: Role.CASHIER, branchId: hledan.id } });
     const cHl3 = await prisma.staff.create({ data: { clerkId: "user_c_hl3", name: "Phyo Wai", email: "phyowai@pos.com", pin: "1103", role: Role.CASHIER, branchId: hledan.id } });
     const cTw1 = await prisma.staff.create({ data: { clerkId: "user_c_tw1", name: "Aung Myo", email: "aungmyo@pos.com", pin: "1201", role: Role.CASHIER, branchId: tamwe.id } });

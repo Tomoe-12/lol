@@ -39,6 +39,7 @@ interface Variant {
   barcode?: string;
   lowStockThreshold?: number;
   costPrice?: number;
+  price?: number;
 }
 
 interface Category {
@@ -152,7 +153,7 @@ export default function ProductsPage() {
       setProdName("")
       setProdCategoryId(categories.length > 0 ? categories[0].id : "")
       setProdImageUrl("")
-      setProdVariants([{ name: "Standard", barcode: "", lowStockThreshold: 10, costPrice: 0 }])
+      setProdVariants([{ name: "Standard", barcode: "", lowStockThreshold: 10, costPrice: 0, price: 0 }])
     }
     setIsFormOpen(true)
   }
@@ -259,7 +260,7 @@ export default function ProductsPage() {
 
   // Dynamic row modifiers for variants & add-ons
   const addVariantRow = () => {
-    setProdVariants([...prodVariants, { name: "", barcode: "", lowStockThreshold: 10, costPrice: 0 }])
+    setProdVariants([...prodVariants, { name: "", barcode: "", lowStockThreshold: 10, costPrice: 0, price: 0 }])
   }
 
   const removeVariantRow = (index: number) => {
@@ -484,19 +485,16 @@ export default function ProductsPage() {
                       </div>
                     </div>
 
-                    <div className="mt-2 space-y-1 font-semibold text-xs text-muted-foreground">
-                      {p.variants.length > 0 && <div>Barcodes: <span className="font-mono text-foreground">{p.variants.map(v => v.barcode).join(', ')}</span></div>}
-                    </div>
                   </div>
 
                   {/* Variants list display */}
                   <div className="mt-3 pt-2 border-t border-border/50">
-                    <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">
-                      {t("Sizes & Variants:", "ဈေးနှုန်းများ:")}
+                    <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1.5 flex justify-between items-center">
+                      <span>{t("Variants", "အမျိုးအစားများ")}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {p.variants.map((v, i) => (
-                        <Badge key={i} variant="secondary" className="text-[10px] py-0 px-1.5 font-bold">
+                        <Badge key={i} variant="secondary" className="text-[10px] py-0.5 px-2 font-bold">
                           {v.name}
                         </Badge>
                       ))}
@@ -522,7 +520,7 @@ export default function ProductsPage() {
 
       {/* Product Form Modal (Create / Edit) */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl bg-card border-border flex flex-col h-[90vh] md:h-auto overflow-hidden p-6 rounded-2xl">
+        <DialogContent className="max-w-3xl bg-card border-border flex flex-col h-[90vh] md:h-auto overflow-hidden p-6 rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-black text-foreground">
               {editingProduct ? t("Edit Product", "ပစ္စည်းပြင်ဆင်ရန်") : t("Add New Product", "ပစ္စည်းအသစ်ထည့်ရန်")}
@@ -682,9 +680,11 @@ export default function ProductsPage() {
               </div>
 
               <div className="flex gap-2 items-center px-1">
-                <label className="flex-1 text-[10px] font-bold text-muted-foreground uppercase">Size / Name</label>
-                <label className="w-32 text-[10px] font-bold text-muted-foreground uppercase">Barcode</label>
-                <label className="w-24 text-[10px] font-bold text-muted-foreground uppercase">Low Stock</label>
+                <label className="flex-1 text-[10px] font-bold text-muted-foreground uppercase">{t("Size / Name", "အမည် / အရွယ်အစား")}</label>
+                <label className="w-36 text-[10px] font-bold text-muted-foreground uppercase">{t("Barcode", "ဘားကုဒ်")}</label>
+                {/* <label className="w-24 text-[10px] font-bold text-muted-foreground uppercase">{t("Cost (Ks)", "ဝယ်ရင်းဈေး")}</label> */}
+                {/* <label className="w-24 text-[10px] font-bold text-muted-foreground uppercase">{t("Sell (Ks)", "ရောင်းဈေး")}</label> */}
+                <label className="w-20 text-[10px] font-bold text-muted-foreground uppercase">{t("Low Stock", "သတိပေးလက်ကျန်")}</label>
                 <div className="w-8"></div>
               </div>
 
@@ -692,7 +692,7 @@ export default function ProductsPage() {
                 <div key={i} className="flex gap-2 items-center">
                   <Input
                     type="text"
-                    placeholder="e.g. Standard, Small, Large"
+                    placeholder="e.g. Standard, Small"
                     value={v.name}
                     onChange={(e) => updateVariantRow(i, "name", e.target.value)}
                     className="flex-1 h-9 bg-muted/10 border-border text-xs font-semibold"
@@ -702,14 +702,33 @@ export default function ProductsPage() {
                     placeholder="Variant Barcode"
                     value={v.barcode || ""}
                     onChange={(e) => updateVariantRow(i, "barcode", e.target.value)}
-                    className="w-40 h-9 bg-muted/10 border-border text-xs font-semibold"
+                    className="w-36 h-9 bg-muted/10 border-border text-xs font-semibold"
                   />
+                  {/* <Input
+                    type="number"
+                    min={0}
+                    placeholder="Cost"
+                    value={v.costPrice ?? 0}
+                    onChange={(e) => updateVariantRow(i, "costPrice", Number(e.target.value))}
+                    className="w-24 h-9 bg-muted/10 border-border text-xs font-semibold"
+                    title={t("Cost Price from supplier", "ဝယ်ရင်းဈေး")}
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder="Sell"
+                    value={v.price ?? 0}
+                    onChange={(e) => updateVariantRow(i, "price", Number(e.target.value))}
+                    className="w-24 h-9 bg-muted/10 border-border text-xs font-bold text-primary"
+                    title={t("Selling Price to customers", "ရောင်းဈေး")}
+                  /> */}
                   <Input
                     type="number"
                     min={0}
                     value={v.lowStockThreshold ?? 10}
                     onChange={(e) => updateVariantRow(i, "lowStockThreshold", Number(e.target.value))}
-                    className="w-24 h-9 bg-muted/10 border-border text-xs font-semibold"
+                    className="w-20 h-9 bg-muted/10 border-border text-xs font-semibold"
+                    title={t("Low Stock Alert Threshold", "သတိပေးလက်ကျန်")}
                   />
                   <Button
                     type="button"

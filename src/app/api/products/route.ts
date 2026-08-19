@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, categoryId, imageUrl, variants } = body;
+    const { name, categoryId, imageUrl, variants, price } = body;
 
     if (!name || !categoryId || !variants || variants.length === 0) {
       return NextResponse.json(
@@ -76,6 +76,7 @@ export async function POST(request: Request) {
         data: {
           name,
           categoryId,
+          price: price !== undefined ? price : (variants[0]?.price || 0),
           imageUrl: imageUrl || null,
           isActive: true,
         },
@@ -91,6 +92,7 @@ export async function POST(request: Request) {
               barcode: v.barcode,
               lowStockThreshold: v.lowStockThreshold ?? 10,
               costPrice: v.costPrice ?? 0,
+              price: v.price ?? (price || 0),
             }
           });
         }
@@ -191,6 +193,7 @@ export async function PUT(request: Request) {
                 barcode: v.barcode,
                 lowStockThreshold: v.lowStockThreshold ?? 10,
                 costPrice: v.costPrice ?? 0,
+                ...(v.price !== undefined ? { price: v.price } : {}),
               },
             });
           } else {
@@ -201,6 +204,7 @@ export async function PUT(request: Request) {
                 barcode: v.barcode,
                 lowStockThreshold: v.lowStockThreshold ?? 10,
                 costPrice: v.costPrice ?? 0,
+                price: v.price ?? price ?? 0,
               },
             });
           }

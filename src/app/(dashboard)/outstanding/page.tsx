@@ -589,7 +589,7 @@ export default function OutstandingPage() {
           {receiptItem && (
             <div className="space-y-4 text-xs font-mono py-2">
               <div className="text-center border-b pb-3 space-y-1">
-                <h3 className="font-black text-sm uppercase">SMARTOS RETAIL POS</h3>
+                <h3 className="font-black text-sm uppercase">SMARTPOS RETAIL POS</h3>
                 <p className="text-muted-foreground text-[10px]">{receiptItem.order.branchName}</p>
                 <p className="text-[10px] text-muted-foreground">
                   Date: {format(new Date(receiptItem.paymentDate), "yyyy-MM-dd HH:mm:ss")}

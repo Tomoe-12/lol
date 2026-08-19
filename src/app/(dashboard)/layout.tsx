@@ -78,7 +78,7 @@ export default function DashboardLayout({
         <header className="flex h-14 items-center justify-between border-b border-border bg-background/80 backdrop-blur-sm px-3 sm:px-6 shrink-0 z-50">
           <div className="flex items-center gap-2 min-w-0">
             <h1 className="text-base font-black tracking-wider text-foreground truncate max-w-[150px] xs:max-w-[200px] sm:max-w-none">
-              SMARTOS
+              SMARTPOS
             </h1>
             <span className="text-xs text-muted-foreground hidden sm:block shrink-0 font-medium">
               — {t("Multi-Branch Management System", "ဆိုင်ခွဲပေါင်းစုံ စီမံခန့်ခွဲမှု စနစ်")}

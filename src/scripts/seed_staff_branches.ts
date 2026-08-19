@@ -10,7 +10,7 @@ async function main() {
     const branchNameClean = b.name.split("/")[0].trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
     // 1. Manager Account
-    const mgrEmail = `manager.${branchNameClean}@smartos.com`;
+    const mgrEmail = `manager.${branchNameClean}@smartpos.com`;
     const mgrName = `${b.name.split("/")[0].trim()} Manager`;
     await prisma.staff.upsert({
       where: { email: mgrEmail },
@@ -54,7 +54,7 @@ async function main() {
     });
 
     // 2. Cashier Account
-    const cshEmail = `cashier.${branchNameClean}@smartos.com`;
+    const cshEmail = `cashier.${branchNameClean}@smartpos.com`;
     const cshName = `${b.name.split("/")[0].trim()} Cashier`;
     await prisma.staff.upsert({
       where: { email: cshEmail },

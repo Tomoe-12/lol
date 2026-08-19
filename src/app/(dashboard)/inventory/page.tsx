@@ -56,6 +56,7 @@ interface StockLevel {
     name: string;
     barcode: string | null;
     costPrice?: number;
+    price?: number;
     lowStockThreshold: number;
     product: Product;
   };
@@ -223,7 +224,6 @@ export default function InventoryPage() {
           id: editStock.variant.product.id,
           name: editStock.variant.product.name,
           categoryId: editStock.variant.product.category.id,
-          price: Number(editSellingPrice),
           variants: [
             {
               id: editStock.variant.id,
@@ -231,6 +231,7 @@ export default function InventoryPage() {
               barcode: editStock.variant.barcode,
               lowStockThreshold: editStock.variant.lowStockThreshold || 10,
               costPrice: Number(editCostPrice),
+              price: Number(editSellingPrice),
             }
           ]
         }),
@@ -596,7 +597,7 @@ export default function InventoryPage() {
                             {(s.variant.costPrice || 0).toLocaleString()} Ks
                           </td>
                           <td className="px-5 py-4 text-right font-bold text-foreground">
-                            {(s.variant.product.price || 0).toLocaleString()} Ks
+                            {((s.variant.price && s.variant.price > 0) ? s.variant.price : (s.variant.product.price || 0)).toLocaleString()} Ks
                           </td>
                           <td className="px-5 py-4 text-center">
                             <span
@@ -620,9 +621,12 @@ export default function InventoryPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-8 text-xs font-bold gap-1 text-primary hover:text-primary hover:bg-primary/5"
+                                className="h-8 text-xs font-bold gap-1 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 border-blue-500/30"
                                 onClick={() => {
                                   setTransferStock(s)
+                                  setTransferQty("")
+                                  setTransferNote("")
+                                  setTransferDestBranchId("")
                                   setIsTransferOpen(true)
                                 }}
                               >
@@ -636,7 +640,7 @@ export default function InventoryPage() {
                                 onClick={() => {
                                   setEditStock(s)
                                   setEditCostPrice(String(s.variant.costPrice || 0))
-                                  setEditSellingPrice(String(s.variant.product.price || 0))
+                                  setEditSellingPrice(String((s.variant.price && s.variant.price > 0) ? s.variant.price : (s.variant.product.price || 0)))
                                   setAdjustQty("")
                                   setAdjustNote("")
                                   setAdjustType("ADD")

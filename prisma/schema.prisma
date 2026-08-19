@@ -153,6 +153,7 @@ model ProductVariant {
   barcode   String   @unique
   lowStockThreshold Int    @default(10)
   costPrice         Float  @default(0)
+  price             Float  @default(0) // variant-specific selling price
   createdAt DateTime @default(now())
 
   transactionItems TransactionItem[]

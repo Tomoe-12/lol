@@ -55,7 +55,7 @@ export default function SignInPage() {
             <Store className="h-8 w-8 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">SMARTOS</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-white">SMARTPOS</h1>
             <p className="text-sm text-slate-400 mt-1">Multi-Branch Retail Management System</p>
           </div>
         </div>
@@ -74,7 +74,7 @@ export default function SignInPage() {
             <label className="text-xs font-medium text-slate-300">{t("Staff Email", "ဝန်ထမ်းအီးမေးလ်")}</label>
             <Input
               type="email"
-              placeholder="e.g. owner@smartos.com"
+              placeholder="e.g. owner@smartpos.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="bg-slate-800/80 border-slate-700 text-white placeholder:text-slate-500 rounded-xl"
@@ -117,7 +117,7 @@ export default function SignInPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => handleQuickLogin("owner@smartos.com", "owner123")}
+              onClick={() => handleQuickLogin("owner@smartpos.com", "owner123")}
               disabled={loading}
               className="flex flex-col items-center h-auto py-2.5 px-2 bg-slate-800/50 hover:bg-slate-800 border-slate-700 rounded-xl"
             >
@@ -129,7 +129,7 @@ export default function SignInPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => handleQuickLogin("manager@smartos.com", "manager123")}
+              onClick={() => handleQuickLogin("manager@smartpos.com", "manager123")}
               disabled={loading}
               className="flex flex-col items-center h-auto py-2.5 px-2 bg-slate-800/50 hover:bg-slate-800 border-slate-700 rounded-xl"
             >
@@ -141,7 +141,7 @@ export default function SignInPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => handleQuickLogin("cashier@smartos.com", "cashier123")}
+              onClick={() => handleQuickLogin("cashier@smartpos.com", "cashier123")}
               disabled={loading}
               className="flex flex-col items-center h-auto py-2.5 px-2 bg-slate-800/50 hover:bg-slate-800 border-slate-700 rounded-xl"
             >

@@ -44,8 +44,10 @@ async function fetchBranchInventory(branchId: string) {
           name: variant.name,
           barcode: variant.barcode,
           costPrice: variant.costPrice ?? 0,
+          price: (variant.price && variant.price > 0) ? variant.price : (product.price ?? 0),
           lowStockThreshold: variant.lowStockThreshold,
           product: {
+            id: product.id,
             name: product.name,
             price: product.price ?? 0,
             imageUrl: product.imageUrl,

@@ -33,7 +33,7 @@ async function main() {
     data: {
       clerkId: "user_owner",
       name: "Owner Han",
-      email: "owner@smartos.com",
+      email: "owner@smartpos.com",
       password: "owner123",
       pin: "9999",
       role: Role.OWNER,
@@ -45,7 +45,7 @@ async function main() {
     data: {
       clerkId: "user_mgr_hl",
       name: "Kyaw Kyaw",
-      email: "manager@smartos.com",
+      email: "manager@smartpos.com",
       password: "manager123",
       pin: "2201",
       role: Role.MANAGER,
@@ -56,7 +56,7 @@ async function main() {
     data: {
       clerkId: "user_mgr_tw",
       name: "Thida Maung",
-      email: "manager2@smartos.com",
+      email: "manager2@smartpos.com",
       password: "manager123",
       pin: "2202",
       role: Role.MANAGER,
@@ -67,7 +67,7 @@ async function main() {
     data: {
       clerkId: "user_mgr_sch",
       name: "Myo Min Aung",
-      email: "manager3@smartos.com",
+      email: "manager3@smartpos.com",
       password: "manager123",
       pin: "2203",
       role: Role.MANAGER,
@@ -78,7 +78,7 @@ async function main() {
     data: {
       clerkId: "user_mgr_mdl",
       name: "Aye Aye Khin",
-      email: "manager4@smartos.com",
+      email: "manager4@smartpos.com",
       password: "manager123",
       pin: "2204",
       role: Role.MANAGER,
@@ -90,7 +90,7 @@ async function main() {
     data: {
       clerkId: "user_c_hl",
       name: "Su Su",
-      email: "cashier@smartos.com",
+      email: "cashier@smartpos.com",
       password: "cashier123",
       pin: "1101",
       role: Role.CASHIER,
@@ -101,7 +101,7 @@ async function main() {
     data: {
       clerkId: "user_c_tw",
       name: "Aung Myo",
-      email: "cashier2@smartos.com",
+      email: "cashier2@smartpos.com",
       password: "cashier123",
       pin: "1201",
       role: Role.CASHIER,
@@ -112,7 +112,7 @@ async function main() {
     data: {
       clerkId: "user_c_sch",
       name: "Ei Phyu",
-      email: "cashier3@smartos.com",
+      email: "cashier3@smartpos.com",
       password: "cashier123",
       pin: "1301",
       role: Role.CASHIER,
@@ -123,7 +123,7 @@ async function main() {
     data: {
       clerkId: "user_c_mdl",
       name: "Win Htut",
-      email: "cashier4@smartos.com",
+      email: "cashier4@smartpos.com",
       password: "cashier123",
       pin: "1401",
       role: Role.CASHIER,

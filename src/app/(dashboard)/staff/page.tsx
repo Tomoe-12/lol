@@ -694,7 +694,7 @@ export default function StaffPage() {
                   <span className="font-bold text-foreground">{selectedStaffForPerms.name}</span>
                   <span className="text-muted-foreground">({selectedStaffForPerms.email})</span>
                   <Badge className={ROLE_LABELS[selectedStaffForPerms.role].color} variant="secondary">
-                    {ROLE_LABELS[selectedStaffForPerms.role].label}
+                    {t(ROLE_LABELS[selectedStaffForPerms.role].en, ROLE_LABELS[selectedStaffForPerms.role].my)}
                   </Badge>
                   <Badge variant="outline">{selectedStaffForPerms.branch?.name}</Badge>
                 </div>

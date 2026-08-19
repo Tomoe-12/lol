@@ -23,8 +23,8 @@ export async function GET(request: Request) {
     const permCheck = checkStaffPermission(staff, "salesOrders", "read", effectiveBranchId);
     if (!permCheck.allowed) {
       const posCheck = checkStaffPermission(staff, "pos", "read", effectiveBranchId);
-      if (!posCheck.allowed && posCheck.errorResponse) {
-        return permCheck.errorResponse;
+      if (!posCheck.allowed) {
+        return posCheck.errorResponse || permCheck.errorResponse || NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
 

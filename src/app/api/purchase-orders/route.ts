@@ -206,13 +206,18 @@ export async function PATCH(request: Request) {
 
           await tx.productVariant.update({
             where: { id: variant.id },
-            data: { costPrice: newCostPrice }
+            data: {
+              costPrice: newCostPrice,
+              ...(item.sellingPrice !== undefined && item.sellingPrice > 0 ? { price: item.sellingPrice } : {}),
+            },
           });
 
-          if (item.sellingPrice !== undefined && item.sellingPrice > 0) {
+          // If parent product price is 0 or unassigned, initialize it
+          const parentProd = await tx.product.findUnique({ where: { id: variant.productId } });
+          if (parentProd && (parentProd.price === 0 || parentProd.price === undefined) && item.sellingPrice && item.sellingPrice > 0) {
             await tx.product.update({
               where: { id: variant.productId },
-              data: { price: item.sellingPrice }
+              data: { price: item.sellingPrice },
             });
           }
 

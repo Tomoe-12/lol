@@ -15,6 +15,7 @@ export interface CartItem {
     name: string;
     barcode?: string | null;
     costPrice?: number;
+    price?: number;
   } | null;
   quantity: number;
   unitPrice: number; // base price
@@ -76,7 +77,9 @@ export const useCartStore = create<CartState>()(
         const variantId = newItem.selectedVariant?.id || "no-variant";
         const itemId = `${newItem.product.id}-${variantId}`;
 
-        const basePrice = newItem.product.price || 0;
+        const basePrice = (newItem.selectedVariant?.price && newItem.selectedVariant.price > 0)
+          ? newItem.selectedVariant.price
+          : (newItem.product.price || 0);
         const unitPrice = basePrice;
 
         const existingItems = get().items;
