@@ -7,6 +7,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
+import { ConfirmModal } from "@/components/ui/confirm-modal"
 import {
   Dialog,
   DialogContent,
@@ -101,6 +102,7 @@ export default function PurchasesPage() {
   const [error, setError] = React.useState<string | null>(null)
   const [isCreateOpen, setIsCreateOpen] = React.useState(false)
   const [createLoading, setCreateLoading] = React.useState(false)
+  const [isSubmitConfirmOpen, setIsSubmitConfirmOpen] = React.useState(false)
   const [newSupplierId, setNewSupplierId] = React.useState("")
   const [newBranchId, setNewBranchId] = React.useState("")
   const [newNote, setNewNote] = React.useState("")
@@ -186,9 +188,29 @@ export default function PurchasesPage() {
     )
   }, [products])
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newSupplierId) return
+  const handleCreateSubmit = async (e: React.FormEvent | null, confirmed = false) => {
+    e?.preventDefault()
+
+    if (!confirmed) {
+      if (!newSupplierId) {
+        setError(t("Please select a supplier before submitting.", "အမှာစာ မတင်မီ ပေးသွင်းသူ ရွေးချယ်ပါ။"))
+        return
+      }
+
+      const hasInvalidItem = formItems.some((item) =>
+        !item.variantId ||
+        Number(item.quantity) <= 0 ||
+        Number(item.unitCost) <= 0 ||
+        Number(item.sellingPrice) <= 0
+      )
+      if (hasInvalidItem) {
+        setError(t("Select a product and enter quantity, cost, and selling price greater than 0.", "ပစ္စည်းရွေးပြီး အရေအတွက်၊ မူရင်းဈေးနှင့် ရောင်းဈေးကို ၀ ထက်ကြီးသော တန်ဖိုးဖြည့်ပါ။"))
+        return
+      }
+
+      setIsSubmitConfirmOpen(true)
+      return
+    }
 
     const validItems = formItems
       .filter(i => i.variantId)
@@ -491,7 +513,7 @@ export default function PurchasesPage() {
                           if (found.costPrice !== undefined && found.costPrice > 0) {
                             updateFormItem(index, "unitCost", found.costPrice)
                           }
-                          const sell = (found.price && found.price > 0) ? found.price : (found.productPrice || 0)
+                          const sell = found.productPrice || found.price || 0
                           if (sell > 0) {
                             updateFormItem(index, "sellingPrice", sell)
                           }
@@ -512,14 +534,14 @@ export default function PurchasesPage() {
                   </div>
                   <div className="w-24">
                     <Input 
-                      type="number" min={0} placeholder={t("Cost", "မူရင်းဈေး")} 
+                      type="number" min={1} placeholder={t("Cost", "မူရင်းဈေး")}
                       value={item.unitCost} onChange={e => updateFormItem(index, "unitCost", e.target.value)}
                       className="h-9 text-xs" title="Unit Cost"
                     />
                   </div>
                   <div className="w-28">
                     <Input 
-                      type="number" min={0} placeholder={t("Sell Price", "ရောင်းဈေး")} 
+                      type="number" min={1} placeholder={t("Sell Price", "ရောင်းဈေး")}
                       value={item.sellingPrice} onChange={e => updateFormItem(index, "sellingPrice", e.target.value)}
                       className="h-9 text-xs" title="Selling Price"
                     />
@@ -558,6 +580,21 @@ export default function PurchasesPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmModal
+        isOpen={isSubmitConfirmOpen}
+        onClose={() => { setIsSubmitConfirmOpen(false); setIsCreateOpen(true) }}
+        onConfirm={() => { setIsSubmitConfirmOpen(false); void handleCreateSubmit(null, true) }}
+        title={t("Confirm Purchase Order", "ဝယ်ယူမှု အမှာစာ အတည်ပြုရန်")}
+        description={t(
+          `Submit this order to ${suppliers.find(s => s.id === newSupplierId)?.name || "the selected supplier"} with ${formItems.length} item(s) totaling ${createCalculations.totalCost.toLocaleString()} Ks?`,
+          `ဤအမှာစာကို ${suppliers.find(s => s.id === newSupplierId)?.name || "ရွေးချယ်ထားသော ပေးသွင်းသူ"} ထံ ${formItems.length} မျိုး၊ စုစုပေါင်း ${createCalculations.totalCost.toLocaleString()} Ks ဖြင့် တင်မည်လား။`
+        )}
+        confirmText={t("Submit Order", "အမှာစာ တင်မည်")}
+        cancelText={t("Review", "ပြန်စစ်မည်")}
+        variant="primary"
+        loading={createLoading}
+      />
 
       {/* Receive Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
@@ -671,14 +708,16 @@ export default function PurchasesPage() {
               <h3 className="font-bold mb-3">{t("Order Items", "မှာယူသည့် ပစ္စည်းများ")}</h3>
               <div className="space-y-2">
                 {viewOrder?.items.map((item) => (
-                  <div key={item.id} className="p-3 bg-card border border-border rounded-lg flex justify-between items-center">
-                    <div>
+                  <div key={item.id} className="p-3 bg-card border border-border rounded-lg flex justify-between items-center gap-4">
+                    <div className="min-w-0">
                       <p className="font-semibold text-sm">{item.variant?.product?.name} - {item.variant?.name}</p>
                       <p className="text-xs text-muted-foreground">{t("Barcode", "ဘားကုဒ်")}: {item.variant?.barcode || "N/A"}</p>
                     </div>
-                    <div className="text-right text-sm">
-                      <p><span className="text-muted-foreground">{item.quantity} pcs @</span> {(item.unitCost ?? item.costPrice ?? 0).toLocaleString()} Ks</p>
-                      <p className="font-bold text-primary mt-1">{t("Total", "စုစုပေါင်း")}: {(item.total ?? (item.quantity * (item.unitCost ?? item.costPrice ?? 0))).toLocaleString()} Ks</p>
+                    <div className="text-right text-xs shrink-0 space-y-1">
+                      <p><span className="text-muted-foreground">{t("Quantity", "အရေအတွက်")}:</span> {item.quantity} pcs</p>
+                      <p><span className="text-muted-foreground">{t("Cost Price", "မူရင်းဈေး")}:</span> {(item.unitCost ?? item.costPrice ?? 0).toLocaleString()} Ks</p>
+                      <p><span className="text-muted-foreground">{t("Selling Price", "ရောင်းဈေး")}:</span> {(item.sellingPrice ?? 0).toLocaleString()} Ks</p>
+                      <p className="font-bold text-primary">{t("Total Cost", "စုစုပေါင်းအရင်း")} : {(item.total ?? (item.quantity * (item.unitCost ?? item.costPrice ?? 0))).toLocaleString()} Ks</p>
                     </div>
                   </div>
                 ))}

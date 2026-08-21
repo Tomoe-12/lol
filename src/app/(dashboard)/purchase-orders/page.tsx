@@ -1,12 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { Search, Loader2, PackageCheck, Truck, ArrowRightCircle, Plus, Trash2, Building2, User, UserCheck } from "lucide-react"
+import { Search, Loader2, PackageCheck, Truck, ArrowRightCircle, Plus, Trash2, Building2, User, UserCheck, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
+import { ConfirmModal } from "@/components/ui/confirm-modal"
 import {
   Dialog,
   DialogContent,
@@ -92,6 +93,8 @@ export default function PurchasesPage() {
   
   // Receive state
   const [selectedOrder, setSelectedOrder] = React.useState<PurchaseOrder | null>(null)
+  const [editOrder, setEditOrder] = React.useState<PurchaseOrder | null>(null)
+  const [editItems, setEditItems] = React.useState<{ id: string; quantity: number; unitCost: number; sellingPrice: number }[]>([])
   const [viewOrder, setViewOrder] = React.useState<PurchaseOrder | null>(null)
   const [cancelOrderConfirm, setCancelOrderConfirm] = React.useState<PurchaseOrder | null>(null)
   const [receiveItems, setReceiveItems] = React.useState<{id: string; quantity: number; unitCost: number; sellingPrice: number}[]>([])
@@ -101,6 +104,7 @@ export default function PurchasesPage() {
   const [error, setError] = React.useState<string | null>(null)
   const [isCreateOpen, setIsCreateOpen] = React.useState(false)
   const [createLoading, setCreateLoading] = React.useState(false)
+  const [isSubmitConfirmOpen, setIsSubmitConfirmOpen] = React.useState(false)
   const [newSupplierId, setNewSupplierId] = React.useState("")
   const [newBranchId, setNewBranchId] = React.useState("")
   const [newNote, setNewNote] = React.useState("")
@@ -186,9 +190,29 @@ export default function PurchasesPage() {
     )
   }, [products])
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newSupplierId) return
+  const handleCreateSubmit = async (e: React.FormEvent | null, confirmed = false) => {
+    e?.preventDefault()
+
+    if (!confirmed) {
+      if (!newSupplierId) {
+        setError(t("Please select a supplier before submitting.", "အမှာစာ မတင်မီ ပေးသွင်းသူ ရွေးချယ်ပါ။"))
+        return
+      }
+
+      const hasInvalidItem = formItems.some((item) =>
+        !item.variantId ||
+        Number(item.quantity) <= 0 ||
+        Number(item.unitCost) <= 0 ||
+        Number(item.sellingPrice) <= 0
+      )
+      if (hasInvalidItem) {
+        setError(t("Select a product and enter quantity, cost, and selling price greater than 0.", "ပစ္စည်းရွေးပြီး အရေအတွက်၊ မူရင်းဈေးနှင့် ရောင်းဈေးကို ၀ ထက်ကြီးသော တန်ဖိုးဖြည့်ပါ။"))
+        return
+      }
+
+      setIsSubmitConfirmOpen(true)
+      return
+    }
 
     const validItems = formItems
       .filter(i => i.variantId)
@@ -237,6 +261,40 @@ export default function PurchasesPage() {
   const handleOpenReceive = (order: PurchaseOrder) => {
     setSelectedOrder(order)
     setReceiveItems(order.items.map(i => ({ id: i.id, quantity: i.quantity, unitCost: i.unitCost, sellingPrice: i.sellingPrice })))
+  }
+
+  const handleOpenEdit = (order: PurchaseOrder) => {
+    setEditOrder(order)
+    setEditItems(order.items.map(i => ({ id: i.id, quantity: i.quantity, unitCost: i.unitCost, sellingPrice: i.sellingPrice })))
+  }
+
+  const updateEditItem = (id: string, field: "quantity" | "unitCost" | "sellingPrice", value: string) => {
+    setEditItems(prev => prev.map(item => item.id === id ? { ...item, [field]: Number(value) } : item))
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editOrder || editItems.some(item => item.quantity <= 0 || item.unitCost <= 0 || item.sellingPrice <= 0)) {
+      setError(t("Quantity, cost price, and selling price must be greater than 0.", "အရေအတွက်၊ မူရင်းဈေးနှင့် ရောင်းဈေးများကို ၀ ထက်ကြီးသော တန်ဖိုးဖြည့်ပါ။"))
+      return
+    }
+    setReceiveLoading(true)
+    try {
+      const res = await fetch("/api/purchase-orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editOrder.id, status: editOrder.status, items: editItems })
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to update purchase order")
+      }
+      await fetchData()
+      setEditOrder(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update purchase order")
+    } finally {
+      setReceiveLoading(false)
+    }
   }
 
   const updateReceiveItem = (id: string, field: "quantity" | "unitCost" | "sellingPrice", val: string) => {
@@ -370,7 +428,10 @@ export default function PurchasesPage() {
                 </div>
                 
                 <div className="mt-auto pt-2 flex gap-2">
-                  <Button variant="outline" className="w-1/3" onClick={() => setCancelOrderConfirm(order)}>
+                  <Button variant="outline" className="flex-1 gap-1" onClick={() => handleOpenEdit(order)}>
+                    <Pencil className="h-3.5 w-3.5" /> {t("Edit", "ပြင်မည်")}
+                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={() => setCancelOrderConfirm(order)}>
                     {t("Cancel", "မလုပ်တော့ပါ")}
                   </Button>
                   <Button className="flex-1 font-bold gap-2" onClick={() => handleOpenReceive(order)}>
@@ -532,7 +593,7 @@ export default function PurchasesPage() {
                           if (found.costPrice !== undefined && found.costPrice > 0) {
                             updateFormItem(index, "unitCost", found.costPrice)
                           }
-                          const sell = (found.price && found.price > 0) ? found.price : (found.productPrice || 0)
+                          const sell = found.productPrice || found.price || 0
                           if (sell > 0) {
                             updateFormItem(index, "sellingPrice", sell)
                           }
@@ -553,14 +614,14 @@ export default function PurchasesPage() {
                   </div>
                   <div className="w-24">
                     <Input 
-                      type="number" min={0} placeholder={t("Cost", "မူရင်းဈေး")} 
+                      type="number" min={1} placeholder={t("Cost", "မူရင်းဈေး")}
                       value={item.unitCost} onChange={e => updateFormItem(index, "unitCost", e.target.value)}
                       className="h-9 text-xs" title="Unit Cost"
                     />
                   </div>
                   <div className="w-28">
                     <Input 
-                      type="number" min={0} placeholder={t("Sell Price", "ရောင်းဈေး")} 
+                      type="number" min={1} placeholder={t("Sell Price", "ရောင်းဈေး")}
                       value={item.sellingPrice} onChange={e => updateFormItem(index, "sellingPrice", e.target.value)}
                       className="h-9 text-xs" title="Selling Price"
                     />
@@ -597,6 +658,55 @@ export default function PurchasesPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmModal
+        isOpen={isSubmitConfirmOpen}
+        onClose={() => { setIsSubmitConfirmOpen(false); setIsCreateOpen(true) }}
+        onConfirm={() => { setIsSubmitConfirmOpen(false); void handleCreateSubmit(null, true) }}
+        title={t("Confirm Purchase Order", "ဝယ်ယူမှု အမှာစာ အတည်ပြုရန်")}
+        description={t(
+          `Submit this order to ${suppliers.find(s => s.id === newSupplierId)?.name || "the selected supplier"} with ${formItems.length} item(s) totaling ${createCalculations.totalCost.toLocaleString()} Ks?`,
+          `ဤအမှာစာကို ${suppliers.find(s => s.id === newSupplierId)?.name || "ရွေးချယ်ထားသော ပေးသွင်းသူ"} ထံ ${formItems.length} မျိုး၊ စုစုပေါင်း ${createCalculations.totalCost.toLocaleString()} Ks ဖြင့် တင်မည်လား။`
+        )}
+        confirmText={t("Submit Order", "အမှာစာ တင်မည်")}
+        cancelText={t("Review", "ပြန်စစ်မည်")}
+        variant="primary"
+        loading={createLoading}
+      />
+
+      <Dialog open={!!editOrder} onOpenChange={(open) => !open && setEditOrder(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{t("Edit Pending Order", "ဆိုင်းငံ့အမှာစာ ပြင်ဆင်ရန်")}: PO-{editOrder?.id.slice(-6).toUpperCase()}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+            {editOrder?.items.map((item) => {
+              const editItem = editItems.find(current => current.id === item.id)
+              if (!editItem) return null
+              return (
+                <div key={item.id} className="p-3 bg-muted/40 rounded-lg border border-border space-y-3">
+                  <div>
+                    <p className="font-bold text-sm">{item.variant?.product?.name} - {item.variant?.name}</p>
+                    <p className="text-xs text-muted-foreground">{t("Barcode", "ဘားကုဒ်")}: {item.variant?.barcode || "N/A"}</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input type="number" min={1} value={editItem.quantity} onChange={e => updateEditItem(item.id, "quantity", e.target.value)} placeholder={t("Qty", "အရေအတွက်")} />
+                    <Input type="number" min={1} value={editItem.unitCost} onChange={e => updateEditItem(item.id, "unitCost", e.target.value)} placeholder={t("Cost", "မူရင်းဈေး")} />
+                    <Input type="number" min={1} value={editItem.sellingPrice} onChange={e => updateEditItem(item.id, "sellingPrice", e.target.value)} placeholder={t("Sell Price", "ရောင်းဈေး")} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <DialogFooter className="mt-4 border-t border-border pt-4">
+            <Button variant="outline" onClick={() => setEditOrder(null)}>{t("Cancel", "မလုပ်တော့ပါ")}</Button>
+            <Button onClick={handleSaveEdit} disabled={receiveLoading} className="font-bold">
+              {receiveLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("Save Changes", "ပြင်ဆင်မှု သိမ်းမည်")}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -712,14 +822,16 @@ export default function PurchasesPage() {
               <h3 className="font-bold mb-3">{t("Order Items", "မှာယူသည့် ပစ္စည်းများ")}</h3>
               <div className="space-y-2">
                 {viewOrder?.items.map((item) => (
-                  <div key={item.id} className="p-3 bg-card border border-border rounded-lg flex justify-between items-center">
-                    <div>
+                  <div key={item.id} className="p-3 bg-card border border-border rounded-lg flex justify-between items-center gap-4">
+                    <div className="min-w-0">
                       <p className="font-semibold text-sm">{item.variant?.product?.name} - {item.variant?.name}</p>
                       <p className="text-xs text-muted-foreground">{t("Barcode", "ဘားကုဒ်")}: {item.variant?.barcode || "N/A"}</p>
                     </div>
-                    <div className="text-right text-sm">
-                      <p><span className="text-muted-foreground">{item.quantity} pcs @</span> {item.unitCost.toLocaleString()} Ks</p>
-                      <p className="font-bold text-primary mt-1">{t("Total", "စုစုပေါင်း")}: {item.total.toLocaleString()} Ks</p>
+                    <div className="text-right text-xs shrink-0 space-y-1">
+                      <p><span className="text-muted-foreground">{t("Quantity", "အရေအတွက်")}:</span> {item.quantity} pcs</p>
+                      <p><span className="text-muted-foreground">{t("Cost Price", "မူရင်းဈေး")}:</span> {item.unitCost.toLocaleString()} Ks</p>
+                      <p><span className="text-muted-foreground">{t("Selling Price", "ရောင်းဈေး")}:</span> {item.sellingPrice.toLocaleString()} Ks</p>
+                      <p className="font-bold text-primary">{t("Total Cost", "စုစုပေါင်းအရင်း")}: {item.total.toLocaleString()} Ks</p>
                     </div>
                   </div>
                 ))}

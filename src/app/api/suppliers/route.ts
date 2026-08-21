@@ -88,11 +88,11 @@ export async function PUT(request: Request) {
       address?: string;
     };
 
-    if (!id) return NextResponse.json({ error: "Supplier ID is required" }, { status: 400 });
+    if (!id || !name?.trim()) return NextResponse.json({ error: "Supplier ID and name are required" }, { status: 400 });
 
     const supplier = await prisma.supplier.update({
       where: { id },
-      data: { name, contact, email, address },
+      data: { name: name.trim(), contact, email, address },
     });
     return NextResponse.json({ supplier });
   } catch (error) {

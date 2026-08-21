@@ -51,14 +51,14 @@ export async function POST(request: Request) {
     }
 
     const { name, address } = await request.json();
-    if (!name) {
+    if (!name?.trim()) {
       return NextResponse.json({ error: "Branch name is required" }, { status: 400 });
     }
 
     // 1. Create the new branch
     const newBranch = await prisma.branch.create({
       data: {
-        name,
+        name: name.trim(),
         address: address || null,
         isActive: true,
       },
@@ -104,14 +104,14 @@ export async function PUT(request: Request) {
     }
 
     const { id, name, address, isActive } = await request.json();
-    if (!id) {
+    if (!id || (name !== undefined && !name.trim())) {
       return NextResponse.json({ error: "Branch ID is required" }, { status: 400 });
     }
 
     const updatedBranch = await prisma.branch.update({
       where: { id },
       data: {
-        name: name !== undefined ? name : undefined,
+        name: name !== undefined ? name.trim() : undefined,
         address: address !== undefined ? address : undefined,
         isActive: isActive !== undefined ? isActive : undefined,
       },

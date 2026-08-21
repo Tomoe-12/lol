@@ -118,6 +118,22 @@ export async function POST(request: Request) {
       })
     );
 
+    for (const item of normalizedItems) {
+      if (!item.productId || !item.variantId) {
+        return NextResponse.json({ error: `A valid product and variant are required for ${item.productName}` }, { status: 400 });
+      }
+      if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+        return NextResponse.json({ error: "Item quantity must be a whole number greater than 0" }, { status: 400 });
+      }
+      if (!Number.isFinite(item.unitPrice) || item.unitPrice <= 0) {
+        return NextResponse.json({ error: `Selling price for ${item.productName} must be greater than 0` }, { status: 400 });
+      }
+      const itemSubtotal = item.unitPrice * item.quantity;
+      if (!Number.isFinite(item.discount || 0) || (item.discount || 0) < 0 || (item.discount || 0) > itemSubtotal) {
+        return NextResponse.json({ error: `Invalid discount for ${item.productName}` }, { status: 400 });
+      }
+    }
+
     // 2. Minimum Selling Price Enforcement (R2)
     for (const item of normalizedItems) {
       if (!item.quantity || item.quantity <= 0) {
@@ -194,24 +210,21 @@ export async function POST(request: Request) {
         }
         const quantity = item.quantity;
 
-        // Upsert stock level for the branch (in case it wasn't seeded somehow)
-        await tx.stockLevel.upsert({
+        const currentStock = await tx.stockLevel.findUnique({
+          where: { branchId_variantId: { branchId, variantId } },
+        });
+        if (!currentStock || currentStock.quantity < quantity) {
+          throw new Error(`INSUFFICIENT_STOCK: ${item.productName} has only ${currentStock?.quantity || 0} available`);
+        }
+
+        await tx.stockLevel.update({
           where: {
             branchId_variantId: {
               branchId,
               variantId,
             },
           },
-          update: {
-            quantity: {
-              decrement: quantity,
-            },
-          },
-          create: {
-            branchId,
-            variantId,
-            quantity: 0 - quantity,
-          },
+          data: { quantity: { decrement: quantity } },
         });
 
         // Log the inventory deduction
@@ -286,8 +299,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, transaction });
   } catch (error) {
     console.error("Checkout transaction error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.startsWith("INSUFFICIENT_STOCK:")) {
+      return NextResponse.json({ error: errorMessage.replace("INSUFFICIENT_STOCK: ", "") }, { status: 400 });
+    }
     return NextResponse.json(
-      { error: "Internal Server Error", details: error instanceof Error ? error.message : String(error) },
+      { error: "Internal Server Error", details: errorMessage },
       { status: 500 }
     );
   }

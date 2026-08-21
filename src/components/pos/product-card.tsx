@@ -48,9 +48,10 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
     let total = 0
     product.variants?.forEach((v) => {
       if (!v.stockLevels || v.stockLevels.length === 0) return
-      const bs = activeBranchId ? v.stockLevels.find((s) => s.branchId === activeBranchId) : null
-      if (bs) {
-        total += bs.quantity
+      if (activeBranchId) {
+        total += v.stockLevels.find((s) => s.branchId === activeBranchId)?.quantity || 0
+      } else {
+        total += v.stockLevels.reduce((sum, stock) => sum + (stock.quantity || 0), 0)
       }
     })
     return total
@@ -61,7 +62,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
   const isOutOfStock = availableStock <= 0
   const firstBarcode = product.variants?.find((v) => v.barcode)?.barcode || null
 
-  const prices = product.variants?.map(v => (v.price && v.price > 0) ? v.price : (product.price || 0)).filter(p => p > 0) || []
+  const prices = product.price > 0 ? [product.price] : []
   const minPrice = prices.length > 0 ? Math.min(...prices) : (product.price || 0)
   const maxPrice = prices.length > 0 ? Math.max(...prices) : (product.price || 0)
   const hasMultiplePrices = minPrice !== maxPrice && minPrice > 0 && maxPrice > 0
@@ -127,7 +128,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
             {product.variants && product.variants.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {product.variants.slice(0, 2).map((v) => {
-                  const vPrice = (v.price && v.price > 0) ? v.price : (product.price || 0)
+                  const vPrice = product.price || 0
                   return (
                     <Badge key={v.id} variant="secondary" className="text-[9px] px-1 py-0 font-medium border-border/50">
                       {v.name}{vPrice > 0 ? ` (${vPrice.toLocaleString()} Ks)` : ""}

@@ -363,7 +363,7 @@ export default function StaffPage() {
     if (userRole === "CASHIER") return false
     if (userRole === "OWNER") return true
     if (userRole === "MANAGER") {
-      return member.branchId === user?.branchId
+      return member.role === "CASHIER" && member.branchId === user?.branchId
     }
     return false
   }
@@ -533,7 +533,7 @@ export default function StaffPage() {
                           <ShieldCheck className="h-4 w-4" />
                         </Button>
                       )}
-                      {canWriteStaff && (
+                      {canWriteStaff && (userRole === "OWNER" || member.role === "CASHIER") && (
                         <>
                           <Button
                             variant="ghost"
@@ -623,8 +623,8 @@ export default function StaffPage() {
                   required
                 >
                   <option value="CASHIER">{t("Cashier", "ငွေကိုင်")}</option>
-                  <option value="MANAGER">{t("Manager", "မန်နေဂျာ")}</option>
-                  <option value="OWNER">{t("Owner", "ပိုင်ရှင်")}</option>
+                  {userRole === "OWNER" && <option value="MANAGER">{t("Manager", "မန်နေဂျာ")}</option>}
+                  {userRole === "OWNER" && <option value="OWNER">{t("Owner", "ပိုင်ရှင်")}</option>}
                 </select>
               </div>
               <div>

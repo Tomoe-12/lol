@@ -14,6 +14,10 @@ export async function GET(
     if (errorResponse) return errorResponse;
     if (!staff) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    if (staff.role === "CASHIER") {
+      return NextResponse.json({ error: "Forbidden: Cashiers cannot access staff permissions" }, { status: 403 });
+    }
+
     const permCheck = checkStaffPermission(staff, "staff", "read");
     if (!permCheck.allowed && permCheck.errorResponse) {
       return permCheck.errorResponse;
@@ -60,6 +64,10 @@ export async function PUT(
     const { staff, errorResponse } = await getAuthStaff(request);
     if (errorResponse) return errorResponse;
     if (!staff) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    if (staff.role === "CASHIER") {
+      return NextResponse.json({ error: "Forbidden: Cashiers cannot modify staff permissions" }, { status: 403 });
+    }
 
     const permCheck = checkStaffPermission(staff, "staff", "write");
     if (!permCheck.allowed && permCheck.errorResponse) {

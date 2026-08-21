@@ -51,6 +51,7 @@ interface Product {
   id: string;
   name: string;
   price: number;
+  costPrice?: number;
   imageUrl: string | null;
   isActive: boolean;
   categoryId: string;
@@ -82,10 +83,14 @@ export default function ProductsPage() {
   const [prodName, setProdName] = React.useState("")
   const [prodCategoryId, setProdCategoryId] = React.useState("")
   const [prodImageUrl, setProdImageUrl] = React.useState("")
+  const [prodCostPrice, setProdCostPrice] = React.useState(0)
+  const [prodSellingPrice, setProdSellingPrice] = React.useState(0)
   const [prodVariants, setProdVariants] = React.useState<Variant[]>([])
 
   // Category Dialog State
   const [isCatOpen, setIsCatOpen] = React.useState(false)
+  const [confirmAction, setConfirmAction] = React.useState<"product" | "create-category" | "update-category" | null>(null)
+  const [pendingCategoryUpdate, setPendingCategoryUpdate] = React.useState<{ id: string; name: string } | null>(null)
   const [newCatName, setNewCatName] = React.useState("")
   const [editingCatId, setEditingCatId] = React.useState<string | null>(null)
   const [editingCatName, setEditingCatName] = React.useState("")
@@ -148,26 +153,61 @@ export default function ProductsPage() {
       setProdName(prod.name)
       setProdCategoryId(prod.categoryId)
       setProdImageUrl(prod.imageUrl || "")
+      setProdCostPrice(
+        prod.costPrice && prod.costPrice > 0
+          ? prod.costPrice
+          : prod.variants.find((variant) => (variant.costPrice ?? 0) > 0)?.costPrice ?? 0
+      )
+      setProdSellingPrice(prod.price || prod.variants.find((variant) => (variant.price ?? 0) > 0)?.price || 0)
       setProdVariants(prod.variants)
     } else {
       setProdName("")
       setProdCategoryId(categories.length > 0 ? categories[0].id : "")
       setProdImageUrl("")
+      setProdCostPrice(0)
+      setProdSellingPrice(0)
       setProdVariants([{ name: "Standard", barcode: "", lowStockThreshold: 10, costPrice: 0, price: 0 }])
     }
     setIsFormOpen(true)
   }
 
   // Handle Product Save (POST / PUT)
-  const handleProductSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!prodName || !prodCategoryId) {
+  const handleProductSubmit = async (e: React.FormEvent | null, confirmed = false) => {
+    e?.preventDefault()
+    if (!prodName.trim() || !prodCategoryId) {
       setError(t("Please fill out name and category", "အမည်နှင့် အမျိုးအစား ဖြည့်စွက်ပါ။"))
       return
     }
 
-    if (prodVariants.length === 0 || prodVariants.some((v) => !v.barcode || v.barcode.trim() === "")) {
-      setError(t("Please ensure at least one variant exists and all have barcodes", "ဘားကုဒ် ဖြည့်စွက်ပါ။"))
+    const namedVariants = prodVariants.filter((v) => v.name.trim() !== "")
+    if (namedVariants.length === 0) {
+      setError(t("Please add at least one variant.", "အနည်းဆုံး အမျိုးအစားတစ်ခု ထည့်ပါ။"))
+      return
+    }
+
+    if (namedVariants.some((v) => !v.barcode || v.barcode.trim() === "")) {
+      setError(t("Please enter a barcode for every variant.", "အမျိုးအစားတိုင်းအတွက် ဘားကုဒ် ဖြည့်ပါ။"))
+      return
+    }
+
+    const barcodes = namedVariants.map((v) => v.barcode!.trim())
+    if (new Set(barcodes).size !== barcodes.length) {
+      setError(t("Each variant must have a unique barcode.", "အမျိုးအစားတိုင်း၏ ဘားကုဒ် မတူရပါ။"))
+      return
+    }
+
+    if (namedVariants.some((v) => (v.lowStockThreshold ?? 0) < 0)) {
+      setError(t("Low stock thresholds cannot be negative.", "လက်ကျန်သတိပေး တန်ဖိုးသည် အနုတ်မဖြစ်ရပါ။"))
+      return
+    }
+
+    if (editingProduct && (prodCostPrice < 0 || prodSellingPrice < 0)) {
+      setError(t("Cost price and selling price cannot be negative.", "မူရင်းဈေးနှင့် ရောင်းဈေးသည် အနုတ်မဖြစ်ရပါ။"))
+      return
+    }
+
+    if (!confirmed) {
+      setConfirmAction("product")
       return
     }
 
@@ -207,8 +247,9 @@ export default function ProductsPage() {
       name: prodName,
       categoryId: prodCategoryId,
       imageUrl: finalImageUrl,
+      ...(editingProduct ? { costPrice: prodCostPrice, price: prodSellingPrice } : {}),
       isActive: editingProduct ? editingProduct.isActive : true,
-      variants: prodVariants.filter((v) => v.name.trim() !== ""),
+      variants: namedVariants.map((v) => ({ ...v, barcode: v.barcode!.trim() })),
     }
 
     try {
@@ -260,7 +301,8 @@ export default function ProductsPage() {
 
   // Dynamic row modifiers for variants & add-ons
   const addVariantRow = () => {
-    setProdVariants([...prodVariants, { name: "", barcode: "", lowStockThreshold: 10, costPrice: 0, price: 0 }])
+    const sharedCostPrice = prodVariants.find((variant) => (variant.costPrice ?? 0) > 0)?.costPrice ?? 0
+    setProdVariants([...prodVariants, { name: "", barcode: "", lowStockThreshold: 10, costPrice: sharedCostPrice, price: 0 }])
   }
 
   const removeVariantRow = (index: number) => {
@@ -280,9 +322,16 @@ export default function ProductsPage() {
   }
 
   // Categories CRUD Handlers
-  const handleCreateCategory = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newCatName) return
+  const handleCreateCategory = async (e: React.FormEvent | null, confirmed = false) => {
+    e?.preventDefault()
+    if (!newCatName.trim()) {
+      setError(t("Please enter a category name.", "အမျိုးအစားအမည် ဖြည့်ပါ။"))
+      return
+    }
+    if (!confirmed) {
+      setConfirmAction("create-category")
+      return
+    }
 
     setActionLoading(true)
     setError(null)
@@ -308,8 +357,16 @@ export default function ProductsPage() {
     }
   }
 
-  const handleUpdateCategory = async (id: string, name: string) => {
-    if (!name) return
+  const handleUpdateCategory = async (id: string, name: string, confirmed = false) => {
+    if (!name.trim()) {
+      setError(t("Please enter a category name.", "အမျိုးအစားအမည် ဖြည့်ပါ။"))
+      return
+    }
+    if (!confirmed) {
+      setPendingCategoryUpdate({ id, name: name.trim() })
+      setConfirmAction("update-category")
+      return
+    }
 
     setActionLoading(true)
     setError(null)
@@ -566,7 +623,33 @@ export default function ProductsPage() {
                   ))}
                 </select>
               </div>
+
             </div>
+
+            {editingProduct && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">{t("Cost Price", "မူရင်းဈေး")}</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={prodCostPrice}
+                    onChange={(e) => setProdCostPrice(Number(e.target.value) || 0)}
+                    className="h-10 bg-muted/10 border-border font-semibold text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">{t("Selling Price", "ရောင်းဈေး")}</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={prodSellingPrice}
+                    onChange={(e) => setProdSellingPrice(Number(e.target.value) || 0)}
+                    className="h-10 bg-muted/10 border-border font-semibold text-sm text-primary"
+                  />
+                </div>
+              </div>
+            )}
 
 
 
@@ -761,6 +844,42 @@ export default function ProductsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => {
+          const action = confirmAction
+          setConfirmAction(null)
+          if (action === "product") {
+            void handleProductSubmit(null, true)
+          } else if (action === "create-category") {
+            void handleCreateCategory(null, true)
+          } else if (action === "update-category" && pendingCategoryUpdate) {
+            void handleUpdateCategory(pendingCategoryUpdate.id, pendingCategoryUpdate.name, true)
+            setPendingCategoryUpdate(null)
+          }
+        }}
+        title={
+          confirmAction === "product"
+            ? t("Confirm Product Save", "ပစ္စည်း သိမ်းဆည်းမှု အတည်ပြုရန်")
+            : t("Confirm Category Save", "အမျိုးအစား သိမ်းဆည်းမှု အတည်ပြုရန်")
+        }
+        description={
+          confirmAction === "product"
+            ? t(
+                `${editingProduct ? "Update" : "Create"} product ${prodName.trim()} with ${prodVariants.filter(v => v.name.trim()).length} variant(s)?`,
+                `${prodName.trim()} ပစ္စည်းကို အမျိုးအစား ${prodVariants.filter(v => v.name.trim()).length} မျိုးဖြင့် ${editingProduct ? "ပြင်ဆင်" : "ဖန်တီး"} မည်လား။`
+              )
+            : confirmAction === "update-category"
+              ? t(`Rename category to ${pendingCategoryUpdate?.name || "this name"}?`, `အမျိုးအစားအမည်ကို ${pendingCategoryUpdate?.name || "ဤအမည်"} သို့ ပြောင်းမည်လား။`)
+              : t(`Create category ${newCatName.trim()}?`, `${newCatName.trim()} အမျိုးအစားကို ဖန်တီးမည်လား။`)
+        }
+        confirmText={t("Save", "သိမ်းဆည်းမည်")}
+        cancelText={t("Review", "ပြန်စစ်မည်")}
+        variant="primary"
+        loading={actionLoading}
+      />
 
       {/* Categories CRUD Manage Dialog */}
       <Dialog open={isCatOpen} onOpenChange={setIsCatOpen}>

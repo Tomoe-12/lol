@@ -505,7 +505,7 @@ export default function ExpensesPage() {
                 <label className="text-sm font-medium mb-1 block">{t("Amount *", "ပမာဏ *")}</label>
                 <Input
                   type="number"
-                  min="0"
+                  min="1"
                   step="1"
                   placeholder="e.g. 500000"
                   value={expAmount}

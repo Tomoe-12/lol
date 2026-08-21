@@ -129,6 +129,34 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
     setError(null)
 
     // Validations
+    if (!activeBranchId) {
+      setError("Please select a valid branch before checkout")
+      return
+    }
+    if (items.length === 0) {
+      setError("Please add at least one item before checkout")
+      return
+    }
+    for (const item of items) {
+      if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+        setError(`Quantity for ${item.product.name} must be a whole number greater than 0`)
+        return
+      }
+      if (!Number.isFinite(item.unitPrice) || item.unitPrice <= 0) {
+        setError(`Selling price for ${item.product.name} must be greater than 0`)
+        return
+      }
+      if (!item.selectedVariant?.id) {
+        setError(`Please select a valid variant for ${item.product.name}`)
+        return
+      }
+      const availableStock = item.selectedVariant.stockLevels?.find((stock) => stock.branchId === activeBranchId)?.quantity || 0
+      if (item.selectedVariant.stockLevels && availableStock < item.quantity) {
+        setError(`Not enough stock for ${item.product.name}. Available: ${availableStock}`)
+        return
+      }
+    }
+
     if (finalOrderDiscount > subtotal || totalDiscount > subtotal) {
       setError("Order discount cannot exceed subtotal")
       return

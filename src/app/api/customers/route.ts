@@ -60,13 +60,13 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { name, phone, email, address } = body;
 
-    if (!name) {
+    if (!name?.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
     const customer = await prisma.customer.create({
       data: {
-        name,
+        name: name.trim(),
         phone,
         email,
         address,

@@ -13,6 +13,10 @@ export async function GET(request: Request) {
     if (errorResponse) return errorResponse;
     if (!staff) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    if (staff.role === Role.CASHIER) {
+      return NextResponse.json({ error: "Forbidden: Cashiers cannot access staff management" }, { status: 403 });
+    }
+
     const permCheck = checkStaffPermission(staff, "staff", "read");
     if (!permCheck.allowed && permCheck.errorResponse) {
       return permCheck.errorResponse;
@@ -52,6 +56,10 @@ export async function POST(request: Request) {
     if (errorResponse) return errorResponse;
     if (!currentStaff) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    if (currentStaff.role === Role.CASHIER) {
+      return NextResponse.json({ error: "Forbidden: Cashiers cannot create staff members" }, { status: 403 });
+    }
+
     const permCheck = checkStaffPermission(currentStaff, "staff", "write");
     if (!permCheck.allowed && permCheck.errorResponse) {
       return permCheck.errorResponse;
@@ -74,6 +82,14 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!Object.values(Role).includes(role)) {
+      return NextResponse.json({ error: "Invalid staff role" }, { status: 400 });
+    }
+
+    if (!(await prisma.branch.findUnique({ where: { id: branchId }, select: { id: true } }))) {
+      return NextResponse.json({ error: "Assigned branch not found" }, { status: 400 });
+    }
+
     // Branch isolation boundary & role restriction for Managers
     if (currentStaff.role === Role.MANAGER) {
       if (branchId !== currentStaff.branchId) {
@@ -82,9 +98,9 @@ export async function POST(request: Request) {
           { status: 403 }
         );
       }
-      if (role === Role.OWNER) {
+      if (role !== Role.CASHIER) {
         return NextResponse.json(
-          { error: "Forbidden: Managers cannot create Owner staff members" },
+          { error: "Forbidden: Managers can only create Cashier staff members" },
           { status: 403 }
         );
       }
@@ -136,6 +152,10 @@ export async function PUT(request: Request) {
     if (errorResponse) return errorResponse;
     if (!currentStaff) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    if (currentStaff.role === Role.CASHIER) {
+      return NextResponse.json({ error: "Forbidden: Cashiers cannot modify staff members" }, { status: 403 });
+    }
+
     const permCheck = checkStaffPermission(currentStaff, "staff", "write");
     if (!permCheck.allowed && permCheck.errorResponse) {
       return permCheck.errorResponse;
@@ -159,6 +179,14 @@ export async function PUT(request: Request) {
       );
     }
 
+    if (!Object.values(Role).includes(role)) {
+      return NextResponse.json({ error: "Invalid staff role" }, { status: 400 });
+    }
+
+    if (!(await prisma.branch.findUnique({ where: { id: branchId }, select: { id: true } }))) {
+      return NextResponse.json({ error: "Assigned branch not found" }, { status: 400 });
+    }
+
     const targetStaff = await prisma.staff.findUnique({ where: { id } });
     if (!targetStaff) {
       return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
@@ -172,10 +200,35 @@ export async function PUT(request: Request) {
           { status: 403 }
         );
       }
-      if (targetStaff.role === Role.OWNER || role === Role.OWNER) {
+      if (
+        targetStaff.id !== currentStaff.id &&
+        targetStaff.role !== Role.CASHIER
+      ) {
+        return NextResponse.json(
+          { error: "Forbidden: Managers can only modify Cashier staff members" },
+          { status: 403 }
+        );
+      }
+      if (targetStaff.id === currentStaff.id && role !== Role.MANAGER) {
+        return NextResponse.json(
+          { error: "Forbidden: Managers cannot change their own role" },
+          { status: 403 }
+        );
+      }
+      if (role === Role.OWNER) {
         return NextResponse.json(
           { error: "Forbidden: Managers cannot modify or assign Owner role" },
           { status: 403 }
+        );
+      }
+    }
+
+    if (targetStaff.role === Role.OWNER && role !== Role.OWNER) {
+      const ownerCount = await prisma.staff.count({ where: { role: Role.OWNER } });
+      if (ownerCount <= 1) {
+        return NextResponse.json(
+          { error: "Cannot change the role of the last Owner" },
+          { status: 400 }
         );
       }
     }
@@ -233,6 +286,10 @@ export async function DELETE(request: Request) {
     if (errorResponse) return errorResponse;
     if (!currentStaff) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    if (currentStaff.role === Role.CASHIER) {
+      return NextResponse.json({ error: "Forbidden: Cashiers cannot delete staff members" }, { status: 403 });
+    }
+
     const permCheck = checkStaffPermission(currentStaff, "staff", "write");
     if (!permCheck.allowed && permCheck.errorResponse) {
       return permCheck.errorResponse;
@@ -245,6 +302,10 @@ export async function DELETE(request: Request) {
     const targetStaff = await prisma.staff.findUnique({ where: { id } });
     if (!targetStaff) return NextResponse.json({ error: "Staff not found" }, { status: 404 });
 
+    if (targetStaff.id === currentStaff.id) {
+      return NextResponse.json({ error: "You cannot delete your own staff account" }, { status: 400 });
+    }
+
     // Manager constraints
     if (currentStaff.role === Role.MANAGER) {
       if (targetStaff.branchId !== currentStaff.branchId) {
@@ -253,9 +314,9 @@ export async function DELETE(request: Request) {
           { status: 403 }
         );
       }
-      if (targetStaff.role === Role.OWNER) {
+      if (targetStaff.id !== currentStaff.id && targetStaff.role !== Role.CASHIER) {
         return NextResponse.json(
-          { error: "Forbidden: Managers cannot delete Owner staff members" },
+          { error: "Forbidden: Managers can only delete Cashier staff members" },
           { status: 403 }
         );
       }

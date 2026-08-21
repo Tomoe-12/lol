@@ -204,10 +204,18 @@ export async function POST(request: Request) {
 
     for (const item of items) {
       const variant = variantMap.get(item.variantId);
-      if (!variant) continue;
-      const qty = Math.max(1, Number(item.quantity) || 1);
-      const uPrice = Number(item.unitPrice) || 0;
+      if (!variant) {
+        return NextResponse.json({ error: `Variant not found: ${item.variantId || "missing variant"}` }, { status: 400 });
+      }
+      const qty = Number(item.quantity);
+      const uPrice = Number(item.unitPrice);
       const itemDiscount = Number(item.discount) || 0;
+      if (!Number.isInteger(qty) || qty <= 0 || !Number.isFinite(uPrice) || uPrice <= 0) {
+        return NextResponse.json({ error: "Each sales-order item requires a whole-number quantity and selling price greater than 0." }, { status: 400 });
+      }
+      if (!Number.isFinite(itemDiscount) || itemDiscount < 0 || itemDiscount > qty * uPrice) {
+        return NextResponse.json({ error: "Item discount must be between 0 and the item subtotal." }, { status: 400 });
+      }
       const effectiveSellingPrice = uPrice - (itemDiscount / qty);
       const dbCostPrice = variant.costPrice || 0;
 

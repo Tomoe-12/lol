@@ -117,18 +117,22 @@ export async function POST(request: Request) {
       return permCheck.errorResponse;
     }
 
-    if (!targetBranchId || !category || amount == null) {
+    if (!targetBranchId || !category || amount == null || !Number.isFinite(Number(amount)) || Number(amount) <= 0) {
       return NextResponse.json(
-        { error: "branchId, category, and amount are required" },
+        { error: "branchId, category, and an amount greater than 0 are required" },
         { status: 400 }
       );
+    }
+
+    if (date && Number.isNaN(new Date(date).getTime())) {
+      return NextResponse.json({ error: "Expense date is invalid" }, { status: 400 });
     }
 
     const expense = await prisma.expense.create({
       data: {
         branchId: targetBranchId,
         category,
-        amount,
+        amount: Number(amount),
         currency: currency ?? "MMK",
         note,
         date: date ? new Date(date) : new Date(),

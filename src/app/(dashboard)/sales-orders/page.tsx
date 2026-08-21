@@ -1165,7 +1165,7 @@ export default function SalesOrdersPage() {
                           </div>
                           <div>
                             <Input 
-                              type="number" min="0" required placeholder="Price"
+                              type="number" min="1" required placeholder="Price"
                               value={item.unitPrice === 0 ? "" : item.unitPrice}
                               onChange={e => {
                                 const next = [...formItems]; next[idx].unitPrice = Number(e.target.value); setFormItems(next)
@@ -1446,7 +1446,7 @@ export default function SalesOrdersPage() {
                             </div>
                             <div>
                               <Input 
-                                type="number" min="0" required placeholder="Price"
+                                type="number" min="1" required placeholder="Price"
                                 value={item.unitPrice === 0 ? "" : item.unitPrice}
                                 onChange={e => {
                                   const next = [...editFormItems]; next[idx].unitPrice = Number(e.target.value); setEditFormItems(next)

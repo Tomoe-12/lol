@@ -77,10 +77,7 @@ export const useCartStore = create<CartState>()(
         const variantId = newItem.selectedVariant?.id || "no-variant";
         const itemId = `${newItem.product.id}-${variantId}`;
 
-        const basePrice = (newItem.selectedVariant?.price && newItem.selectedVariant.price > 0)
-          ? newItem.selectedVariant.price
-          : (newItem.product.price || 0);
-        const unitPrice = basePrice;
+        const unitPrice = newItem.product.price || 0;
 
         const existingItems = get().items;
         const existingItemIndex = existingItems.findIndex((item) => item.id === itemId);
@@ -111,7 +108,9 @@ export const useCartStore = create<CartState>()(
       updateQuantity: (itemId, quantity) =>
         set((state) => ({
           items: state.items.map((item) =>
-            item.id === itemId ? { ...item, quantity: Math.max(1, quantity) } : item
+            item.id === itemId
+              ? { ...item, quantity: Math.max(1, Number.isFinite(quantity) ? Math.floor(quantity) : 1) }
+              : item
           ),
         })),
 

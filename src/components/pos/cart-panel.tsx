@@ -17,6 +17,7 @@ export function CartPanel({ onCheckoutClick, onHoldCartsClick }: CartPanelProps)
   const { t } = useLanguage()
   const items = useCartStore((state) => state.items)
   const exchangeRate = useCartStore((state) => state.exchangeRate)
+  const activeBranchId = useCartStore((state) => state.activeBranchId)
   const orderDiscount = useCartStore((state) => state.orderDiscount)
   const orderDiscountType = useCartStore((state) => state.orderDiscountType)
   const heldCarts = useCartStore((state) => state.heldCarts)
@@ -143,6 +144,10 @@ export function CartPanel({ onCheckoutClick, onHoldCartsClick }: CartPanelProps)
         ) : (
           items.map((item) => {
             const itemTotal = (item.unitPrice * item.quantity) - (item.discount || 0)
+            const stockLevels = item.selectedVariant?.stockLevels
+            const availableStock = stockLevels
+              ? stockLevels.find((stock) => stock.branchId === activeBranchId)?.quantity || 0
+              : undefined
             return (
               <div
                 key={item.id}
@@ -185,12 +190,27 @@ export function CartPanel({ onCheckoutClick, onHoldCartsClick }: CartPanelProps)
                     >
                       <Minus className="h-3 w-3" />
                     </Button>
-                    <span className="text-xs font-bold w-6 text-center text-foreground">{item.quantity}</span>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={availableStock}
+                      step={1}
+                      value={item.quantity}
+                      onChange={(event) => {
+                        const nextQuantity = Number(event.target.value)
+                        if (!Number.isInteger(nextQuantity) || nextQuantity < 1) return
+                        if (availableStock !== undefined && nextQuantity > availableStock) return
+                        updateQuantity(item.id, nextQuantity)
+                      }}
+                      className="h-6 w-12 px-1 text-center text-xs font-bold text-foreground"
+                      aria-label={t("Quantity", "အရေအတွက်")}
+                    />
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 text-foreground rounded-md"
                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      disabled={availableStock !== undefined && item.quantity >= availableStock}
                     >
                       <Plus className="h-3 w-3" />
                     </Button>

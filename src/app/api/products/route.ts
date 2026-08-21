@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, categoryId, imageUrl, variants, price } = body;
+    const { name, categoryId, imageUrl, variants, price, costPrice } = body;
 
     if (!name || !categoryId || !variants || variants.length === 0) {
       return NextResponse.json(
@@ -71,12 +71,18 @@ export async function POST(request: Request) {
     }
 
     const newProduct = await prisma.$transaction(async (tx) => {
+      const productPrice = Number(price ?? variants[0]?.price ?? 0);
+      const productCostPrice = Number(costPrice) > 0
+        ? Number(costPrice)
+        : Number(variants.find((v: { costPrice?: number }) => Number(v.costPrice) > 0)?.costPrice ?? 0);
+
       // 1. Create Product
       const product = await tx.product.create({
         data: {
           name,
           categoryId,
-          price: price !== undefined ? price : (variants[0]?.price || 0),
+          price: productPrice,
+          costPrice: productCostPrice,
           imageUrl: imageUrl || null,
           isActive: true,
         },
@@ -91,8 +97,8 @@ export async function POST(request: Request) {
               name: v.name,
               barcode: v.barcode,
               lowStockThreshold: v.lowStockThreshold ?? 10,
-              costPrice: v.costPrice ?? 0,
-              price: v.price ?? (price || 0),
+              costPrice: productCostPrice,
+              price: productPrice,
             }
           });
         }
@@ -137,7 +143,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { id, name, categoryId, imageUrl, variants, isActive, price } = body;
+    const { id, name, categoryId, imageUrl, variants, isActive, price, costPrice } = body;
 
     if (!id || !name || !categoryId || !variants || variants.length === 0) {
       return NextResponse.json(
@@ -147,6 +153,16 @@ export async function PUT(request: Request) {
     }
 
     const updatedProduct = await prisma.$transaction(async (tx) => {
+      const existingProduct = await tx.product.findUnique({ where: { id } });
+      const productPrice = Number(price ?? existingProduct?.price ?? 0);
+      const productCostPrice = Number(costPrice) > 0
+        ? Number(costPrice)
+        : Number(
+            variants.find((v: { costPrice?: number }) => Number(v.costPrice) > 0)?.costPrice
+              ?? existingProduct?.costPrice
+              ?? 0
+          );
+
       // 1. Update Product details
       await tx.product.update({
         where: { id },
@@ -155,7 +171,8 @@ export async function PUT(request: Request) {
           categoryId,
           imageUrl: imageUrl || null,
           isActive: isActive ?? true,
-          ...(price !== undefined ? { price: Number(price) } : {}),
+          price: productPrice,
+          costPrice: productCostPrice,
         },
       });
 
@@ -192,8 +209,8 @@ export async function PUT(request: Request) {
                 name: v.name,
                 barcode: v.barcode,
                 lowStockThreshold: v.lowStockThreshold ?? 10,
-                costPrice: v.costPrice ?? 0,
-                ...(v.price !== undefined ? { price: v.price } : {}),
+                costPrice: productCostPrice,
+                price: productPrice,
               },
             });
           } else {
@@ -203,12 +220,18 @@ export async function PUT(request: Request) {
                 name: v.name,
                 barcode: v.barcode,
                 lowStockThreshold: v.lowStockThreshold ?? 10,
-                costPrice: v.costPrice ?? 0,
-                price: v.price ?? price ?? 0,
+                costPrice: productCostPrice,
+                price: productPrice,
               },
             });
           }
         }
+
+        // Product price is shared by every variant.
+        await tx.productVariant.updateMany({
+          where: { productId: id },
+          data: { price: productPrice },
+        });
       }
 
       return tx.product.findUnique({

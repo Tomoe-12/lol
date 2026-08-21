@@ -37,7 +37,11 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md border-border bg-card">
+      <DialogContent
+        className="sm:max-w-md border-border bg-card"
+        onPointerDown={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <DialogHeader className="flex flex-col items-center sm:items-start gap-3">
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-2xl ${

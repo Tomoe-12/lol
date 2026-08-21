@@ -89,9 +89,13 @@ export function POSContainer({
       initialBranches.find((b) => b.id === targetBranchId)?.name ||
       ""
 
-    if (targetBranchId && (!isOwnerRole || !activeBranchId)) {
+    const hasValidActiveBranch = Boolean(
+      activeBranchId && initialBranches.some((branch) => branch.id === activeBranchId)
+    )
+
+    if (targetBranchId && (!isOwnerRole || !hasValidActiveBranch)) {
       setBranch(targetBranchId, targetBranchName)
-    } else if (!activeBranchId && initialBranches.length > 0) {
+    } else if (!hasValidActiveBranch && initialBranches.length > 0) {
       setBranch(initialBranches[0].id, initialBranches[0].name)
     }
   }, [activeStaff, user, activeBranchId, initialBranches, setBranch])

@@ -134,6 +134,7 @@ model Product {
   id          String   @id @default(cuid())
   name        String
   price       Float    @default(0)
+  costPrice   Float    @default(0)
   imageUrl    String?
   isActive    Boolean  @default(true)
   categoryId  String
@@ -152,8 +153,8 @@ model ProductVariant {
   name      String   // e.g. "Small", "Medium", "Large"
   barcode   String   @unique
   lowStockThreshold Int    @default(10)
-  costPrice         Float  @default(0)
-  price             Float  @default(0) // variant-specific selling price
+  costPrice         Float  @default(0) // synchronized from the parent product
+  price             Float  @default(0) // synchronized from the parent product
   createdAt DateTime @default(now())
 
   transactionItems TransactionItem[]

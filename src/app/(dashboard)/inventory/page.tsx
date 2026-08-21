@@ -597,7 +597,7 @@ export default function InventoryPage() {
                             {(s.variant.costPrice || 0).toLocaleString()} Ks
                           </td>
                           <td className="px-5 py-4 text-right font-bold text-foreground">
-                            {((s.variant.price && s.variant.price > 0) ? s.variant.price : (s.variant.product.price || 0)).toLocaleString()} Ks
+                            {(s.variant.product.price || 0).toLocaleString()} Ks
                           </td>
                           <td className="px-5 py-4 text-center">
                             <span
@@ -640,7 +640,7 @@ export default function InventoryPage() {
                                 onClick={() => {
                                   setEditStock(s)
                                   setEditCostPrice(String(s.variant.costPrice || 0))
-                                  setEditSellingPrice(String((s.variant.price && s.variant.price > 0) ? s.variant.price : (s.variant.product.price || 0)))
+                                  setEditSellingPrice(String(s.variant.product.price || 0))
                                   setAdjustQty("")
                                   setAdjustNote("")
                                   setAdjustType("ADD")

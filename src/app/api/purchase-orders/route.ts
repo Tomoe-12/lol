@@ -161,6 +161,15 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Purchase Order has already been received" }, { status: 400 });
     }
 
+    if (status !== PurchaseOrderStatus.RECEIVED && items?.some((item) =>
+      item.quantity <= 0 || item.unitCost <= 0 || item.sellingPrice <= 0
+    )) {
+      return NextResponse.json(
+        { error: "Quantity, cost price, and selling price must be greater than 0" },
+        { status: 400 }
+      );
+    }
+
     // If receiving, increment stock levels for all items
     if (status === PurchaseOrderStatus.RECEIVED) {
       await prisma.$transaction(async (tx) => {
@@ -208,15 +217,26 @@ export async function PATCH(request: Request) {
             where: { id: variant.id },
             data: {
               costPrice: newCostPrice,
-              ...(item.sellingPrice !== undefined && item.sellingPrice > 0 ? { price: item.sellingPrice } : {}),
             },
           });
 
-          // If parent product price is 0 or unassigned, initialize it
-          const parentProd = await tx.product.findUnique({ where: { id: variant.productId } });
-          if (parentProd && (parentProd.price === 0 || parentProd.price === undefined) && item.sellingPrice && item.sellingPrice > 0) {
+          await tx.product.update({
+            where: { id: variant.productId },
+            data: { costPrice: newCostPrice },
+          });
+          await tx.productVariant.updateMany({
+            where: { productId: variant.productId },
+            data: { costPrice: newCostPrice },
+          });
+
+          // Selling price is product-level: keep every variant at the same price.
+          if (item.sellingPrice !== undefined && item.sellingPrice > 0) {
             await tx.product.update({
               where: { id: variant.productId },
+              data: { price: item.sellingPrice },
+            });
+            await tx.productVariant.updateMany({
+              where: { productId: variant.productId },
               data: { price: item.sellingPrice },
             });
           }
@@ -248,6 +268,29 @@ export async function PATCH(request: Request) {
             status,
             totalCost: newTotalCost,
             receivedById: staff.id,
+            ...(!po.createdById ? { createdById: staff.id } : {}),
+          },
+        });
+      });
+    } else if (items && items.length > 0) {
+      await prisma.$transaction(async (tx) => {
+        const newTotalCost = items.reduce((total, item) => total + item.quantity * item.unitCost, 0);
+        for (const item of items) {
+          await tx.purchaseItem.update({
+            where: { id: item.id },
+            data: {
+              quantity: item.quantity,
+              unitCost: item.unitCost,
+              sellingPrice: item.sellingPrice,
+              total: item.quantity * item.unitCost,
+            },
+          });
+        }
+        await tx.purchaseOrder.update({
+          where: { id },
+          data: {
+            status,
+            totalCost: newTotalCost,
             ...(!po.createdById ? { createdById: staff.id } : {}),
           },
         });
