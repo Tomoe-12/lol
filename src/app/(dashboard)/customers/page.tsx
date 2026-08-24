@@ -71,6 +71,7 @@ export default function CustomersPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   
   // Form State
   const [name, setName] = useState("")
@@ -114,8 +115,8 @@ export default function CustomersPage() {
     setError("")
 
     try {
-      const res = await fetch("/api/customers", {
-        method: "POST",
+      const res = await fetch(editingCustomer ? `/api/customers/${editingCustomer.id}` : "/api/customers", {
+        method: editingCustomer ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, phone, email, address }),
       })
@@ -123,9 +124,10 @@ export default function CustomersPage() {
       if (res.ok) {
         setIsModalOpen(false)
         resetForm()
-        fetchCustomers()
+        fetchCustomers(searchQuery)
       } else {
         const data = await res.json()
+        setError(data.error || "Could not save customer.")
       }
     } catch (error) {
       setError("An unexpected error occurred")
@@ -135,11 +137,41 @@ export default function CustomersPage() {
   }
 
   const resetForm = () => {
+    setEditingCustomer(null)
     setName("")
     setPhone("")
     setEmail("")
     setAddress("")
     setError("")
+  }
+
+  const handleEdit = (customer: Customer) => {
+    setEditingCustomer(customer)
+    setName(customer.name)
+    setPhone(customer.phone || "")
+    setEmail(customer.email || "")
+    setAddress(customer.address || "")
+    setError("")
+    setIsModalOpen(true)
+  }
+
+  const handleDelete = async (customer: Customer) => {
+    if (!window.confirm(`Delete customer "${customer.name}"?`)) return
+    setSaving(true)
+    setError("")
+    try {
+      const res = await fetch(`/api/customers/${customer.id}`, { method: "DELETE" })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Could not delete customer.")
+        return
+      }
+      await fetchCustomers(searchQuery)
+    } catch {
+      setError("An unexpected error occurred")
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (role === "CASHIER") {
@@ -251,10 +283,10 @@ export default function CustomersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem disabled>
+                        <DropdownMenuItem onSelect={() => handleEdit(c)}>
                           <Edit className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" disabled>
+                        <DropdownMenuItem className="text-destructive" onSelect={() => handleDelete(c)}>
                           <Trash2 className="mr-2 h-4 w-4" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -281,7 +313,7 @@ export default function CustomersPage() {
       }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add New Customer</DialogTitle>
+            <DialogTitle>{editingCustomer ? "Edit Customer" : "Add New Customer"}</DialogTitle>
             <DialogDescription>
               Enter the details of the new customer.
             </DialogDescription>
@@ -307,6 +339,7 @@ export default function CustomersPage() {
             <div className="space-y-2">
               <label className="text-sm font-semibold">Phone</label>
               <Input
+                required
                 placeholder="e.g. 09-123456789"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
