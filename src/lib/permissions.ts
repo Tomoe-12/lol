@@ -222,6 +222,8 @@ export function getModuleKeyForPath(pathname: string): ModuleKey | null {
   if (pathname.startsWith("/pos")) return "pos";
   if (pathname.startsWith("/inventory")) return "inventory";
   if (pathname.startsWith("/sales-orders") || pathname.startsWith("/customers")) return "salesOrders";
+  if (pathname.startsWith("/outstanding")) return "outstanding";
+  if (pathname.startsWith("/delivery")) return "delivery";
   if (pathname.startsWith("/purchases") || pathname.startsWith("/purchase-orders") || pathname.startsWith("/suppliers")) return "purchases";
   if (pathname.startsWith("/expenses")) return "expenses";
   if (pathname.startsWith("/staff")) return "staff";

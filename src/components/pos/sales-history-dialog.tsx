@@ -88,19 +88,19 @@ export function SalesHistoryDialog({
     if (!isOpen) return
     setLoading(true)
     try {
-      let url = branchId ? `/api/sales-orders?branchId=${branchId}` : "/api/sales-orders"
+      let url = branchId ? `/api/transactions?branchId=${branchId}` : "/api/transactions"
       let res = await fetch(url)
       let data = await res.json()
 
       // If OWNER and no transactions returned for specific activeBranchId, fallback to fetching all branches
-      if (res.ok && userRole === "OWNER" && (!data.salesOrders || data.salesOrders.length === 0) && branchId) {
-        url = "/api/sales-orders"
+      if (res.ok && userRole === "OWNER" && (!data.transactions || data.transactions.length === 0) && branchId) {
+        url = "/api/transactions"
         res = await fetch(url)
         data = await res.json()
       }
 
       if (res.ok) {
-        const allSales = (data.salesOrders || []) as SalesTransactionRecord[]
+        const allSales = (data.transactions || []) as SalesTransactionRecord[]
         setTransactions(allSales)
       }
 

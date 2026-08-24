@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAuthStaff } from "@/lib/auth-helper"
+import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper"
 
 export async function GET(request: Request) {
   try {
@@ -20,6 +20,9 @@ export async function GET(request: Request) {
     } else if (branchId && branchId !== "ALL") {
       effectiveBranchId = branchId
     }
+
+    const permission = checkStaffPermission(staff, "delivery", "read", effectiveBranchId)
+    if (!permission.allowed) return permission.errorResponse || NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
     const whereCondition: Record<string, unknown> = {
       isDelivery: true,

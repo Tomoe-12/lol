@@ -97,6 +97,11 @@ export async function POST(request: Request) {
           note: body.note || `Fulfillment of Sales Order #${order.id.slice(-6).toUpperCase()}`,
           items: { create: normalized.map((item) => ({ productId: item.variant.productId, variantId: item.variantId, quantity: item.quantity, unitPrice: item.unitPrice, unitCost: item.variant.costPrice, discount: item.discount, total: item.lineTotal })) },
         },
+        include: {
+          branch: true,
+          staff: { select: { id: true, name: true } },
+          items: { include: { product: true, variant: true } },
+        },
       });
       for (const item of normalized) {
         await tx.stockLevel.update({ where: { branchId_variantId: { branchId: order.branchId, variantId: item.variantId } }, data: { quantity: { decrement: item.quantity } } });

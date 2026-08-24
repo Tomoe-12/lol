@@ -74,6 +74,11 @@ export default function PurchasesPage() {
   const { user } = useUser()
   const { t } = useLanguage()
   const role = user?.publicMetadata?.role as string | undefined
+  const todayDate = React.useMemo(() => {
+    const now = new Date()
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+    return local.toISOString().slice(0, 10)
+  }, [])
 
   const [orders, setOrders] = React.useState<PurchaseOrder[]>([])
   const [suppliers, setSuppliers] = React.useState<Supplier[]>([])
@@ -106,6 +111,7 @@ export default function PurchasesPage() {
   const [newSupplierId, setNewSupplierId] = React.useState("")
   const [newBranchId, setNewBranchId] = React.useState("")
   const [newNote, setNewNote] = React.useState("")
+  const [newArrivalDate, setNewArrivalDate] = React.useState("")
   const [formItems, setFormItems] = React.useState<{ variantId: string; quantity: number; unitCost: number; sellingPrice: number }[]>([])
 
   const createCalculations = React.useMemo(() => {
@@ -156,6 +162,7 @@ export default function PurchasesPage() {
   const openCreate = () => {
     setNewSupplierId(suppliers[0]?.id || "")
     setNewNote("")
+    setNewArrivalDate(todayDate)
     setFormItems([{ variantId: "", quantity: 1, unitCost: 0, sellingPrice: 0 }])
     setIsCreateOpen(true)
   }
@@ -230,30 +237,41 @@ export default function PurchasesPage() {
         body: JSON.stringify({ 
           supplierId: newSupplierId, 
           branchId: newBranchId || undefined,
-          note: newNote, 
-          items: validItems 
+          note: newNote,
+          items: validItems,
+          arrivalDate: newArrivalDate
         })
       })
-      if (!res.ok) throw new Error("Failed to create order")
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || data?.details || "Failed to create order")
+      }
       
-      // Auto-mark as ordered for simplicity in this flow, or leave as draft and add another button
-      // To keep it simple, we just create it (which defaults to DRAFT in backend), then instantly mark ORDERED
       const createData = await res.json()
-      
-      await fetch("/api/purchase-orders", {
+      const submittedAt = new Date().toISOString()
+      const receivedItems = (createData.order.items || []).map((item: { id: string }, index: number) => ({
+        id: item.id,
+        quantity: validItems[index].quantity,
+        unitCost: validItems[index].unitCost,
+        sellingPrice: validItems[index].sellingPrice,
+      }))
+      const orderStatusRes = await fetch("/api/purchase-orders", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           id: createData.order.id, 
           status: "RECEIVED",
-          items: createData.order.items.map((i: { id: string, quantity: number, unitCost: number, sellingPrice: number }) => ({
-            id: i.id,
-            quantity: i.quantity,
-            unitCost: i.unitCost,
-            sellingPrice: i.sellingPrice
-          }))
+          items: receivedItems,
+          paymentStatus: "PAID",
+          amountPaid: createCalculations.totalCost,
+          voucherNumber: `DIRECT-${createData.order.id.slice(-8).toUpperCase()}`,
+          arrivalDate: submittedAt
         })
       })
+      if (!orderStatusRes.ok) {
+        const data = await orderStatusRes.json().catch(() => null)
+        throw new Error(data?.error || data?.details || "Failed to receive purchase immediately")
+      }
 
       await fetchData()
       setIsCreateOpen(false)

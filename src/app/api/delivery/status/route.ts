@@ -29,7 +29,7 @@ export async function PATCH(request: Request) {
 
     if (existing.status !== "DELIVERING" || !existing.isDelivery) return NextResponse.json({ error: "Only orders sent to Delivery can be marked delivered." }, { status: 400 })
     if (!['PENDING', 'DELIVERED'].includes(deliveryStatus)) return NextResponse.json({ error: "Invalid delivery status." }, { status: 400 })
-    const permission = checkStaffPermission(staff, "salesOrders", "write", existing.branchId)
+    const permission = checkStaffPermission(staff, "delivery", "write", existing.branchId)
     if (!permission.allowed) return permission.errorResponse || NextResponse.json({ error: "Forbidden" }, { status: 403 })
     const order = await prisma.salesOrder.update({ where: { id: salesOrderId }, data: { deliveryStatus, status: deliveryStatus === "DELIVERED" ? "COMPLETED" : "DELIVERING" } })
     return NextResponse.json({ success: true, order })

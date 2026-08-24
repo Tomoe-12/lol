@@ -17,6 +17,7 @@ import {
   Filter,
   Loader2,
   Pencil,
+  Eye,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -85,6 +86,11 @@ interface InventoryLog {
   createdAt: string;
 }
 
+interface InventoryLogDetails {
+  sourceType: string;
+  source: Record<string, any> | null;
+}
+
 export default function InventoryPage() {
   const { user } = useUser()
   const { t } = useLanguage()
@@ -99,6 +105,9 @@ export default function InventoryPage() {
   const [selectedBranchId, setSelectedBranchId] = React.useState<string>("")
   const [stockLevels, setStockLevels] = React.useState<StockLevel[]>([])
   const [logs, setLogs] = React.useState<InventoryLog[]>([])
+  const [selectedLog, setSelectedLog] = React.useState<InventoryLog | null>(null)
+  const [selectedLogDetails, setSelectedLogDetails] = React.useState<InventoryLogDetails | null>(null)
+  const [logDetailsLoading, setLogDetailsLoading] = React.useState(false)
   const [categories, setCategories] = React.useState<string[]>([])
   
   // Filter States
@@ -172,6 +181,18 @@ export default function InventoryPage() {
       console.error("Failed to fetch inventory data:", err)
     } finally {
       if (!options?.silent) setLoading(false)
+    }
+  }
+
+  const viewInventoryLog = async (log: InventoryLog) => {
+    setSelectedLog(log)
+    setSelectedLogDetails(null)
+    setLogDetailsLoading(true)
+    try {
+      const response = await fetch(`/api/inventory/logs/${log.id}`)
+      if (response.ok) setSelectedLogDetails(await response.json() as InventoryLogDetails)
+    } finally {
+      setLogDetailsLoading(false)
     }
   }
 
@@ -682,12 +703,13 @@ export default function InventoryPage() {
                   <th className="px-5 py-3.5 text-center">{t("Change", "အပြောင်းအလဲ")}</th>
                   <th className="px-5 py-3.5">{t("Operation Type", "အမျိုးအစား")}</th>
                   <th className="px-5 py-3.5">{t("Details", "မှတ်ချက်")}</th>
+                  <th className="px-5 py-3.5 text-right">{t("Action", "လုပ်ဆောင်ချက်")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border font-medium">
                 {logs.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-12 text-center text-muted-foreground italic">
+                    <td colSpan={6} className="px-5 py-12 text-center text-muted-foreground italic">
                       {t("No stock changes logged for this branch yet", "မှတ်တမ်းမရှိသေးပါ။")}
                     </td>
                   </tr>
@@ -726,7 +748,13 @@ export default function InventoryPage() {
                           </Badge>
                         </td>
                         <td className="px-5 py-3.5 text-muted-foreground text-xs">
-                          {log.note || "—"}
+                          <span className="line-clamp-2">{log.note || "—"}</span>
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => void viewInventoryLog(log)}>
+                            <Eye className="h-3.5 w-3.5" />
+                            {t("View", "ကြည့်ရန်")}
+                          </Button>
                         </td>
                       </tr>
                     )
@@ -737,6 +765,25 @@ export default function InventoryPage() {
           </div>
         </div>
       )}
+
+      <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("Inventory Log Details", "ကုန်ပစ္စည်းလှုပ်ရှားမှု အသေးစိတ်")}</DialogTitle>
+            <DialogDescription>{t("Complete history for this stock movement.", "ဤကုန်ပစ္စည်းလှုပ်ရှားမှု၏ အသေးစိတ်မှတ်တမ်း။")}</DialogDescription>
+          </DialogHeader>
+          {logDetailsLoading ? <div className="py-8 text-center text-sm text-muted-foreground">{t("Loading complete details...", "အသေးစိတ်များ ရယူနေပါသည်...")}</div> : selectedLog && <div className="grid gap-3 text-sm sm:grid-cols-2">
+            <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold text-muted-foreground">{t("Product", "ပစ္စည်း")}</p><p className="mt-1 font-bold">{selectedLog.variant?.product?.name || "—"}</p><p className="text-xs text-muted-foreground">{selectedLog.variant?.name || "—"}</p></div>
+            <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold text-muted-foreground">{t("Change", "အပြောင်းအလဲ")}</p><p className={`mt-1 text-xl font-black ${selectedLog.change > 0 ? "text-emerald-600" : "text-destructive"}`}>{selectedLog.change > 0 ? `+${selectedLog.change}` : selectedLog.change}</p></div>
+            <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold text-muted-foreground">{t("Operation Type", "အမျိုးအစား")}</p><p className="mt-1 font-bold">{getReasonLabel(selectedLog.reason)}</p></div>
+            <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold text-muted-foreground">{t("Date & Time", "အချိန်")}</p><p className="mt-1 font-semibold">{new Date(selectedLog.createdAt).toLocaleString()}</p></div>
+            <div className="rounded-lg bg-muted/40 p-3 sm:col-span-2"><p className="text-xs font-semibold text-muted-foreground">{t("Branch", "ဆိုင်ခွဲ")}</p><p className="mt-1 font-semibold">{selectedLogDetails?.source?.branch?.name || "—"}</p></div>
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 sm:col-span-2"><p className="text-xs font-bold uppercase text-primary">{t("Source Details", "မူရင်းအကြောင်းအရာ အသေးစိတ်")}</p>{selectedLogDetails?.source ? <div className="mt-2 space-y-2"><p><span className="font-semibold">{selectedLogDetails.sourceType.replaceAll("_", " ")}:</span> #{String(selectedLogDetails.source.id || selectedLogDetails.source.orderNumber || "—").slice(-10).toUpperCase()}</p>{selectedLogDetails.sourceType === "SALES_ORDER" && <><p><span className="font-semibold">{t("Customer", "ဝယ်သူ")}:</span> {selectedLogDetails.source.customer?.name || "—"}</p><p><span className="font-semibold">{t("Customer phone", "ဝယ်သူဖုန်း")}:</span> {(selectedLogDetails.source.customer?.phones || [selectedLogDetails.source.customer?.phone || ""]).filter(Boolean).join(", ") || "—"}</p><p><span className="font-semibold">{t("Payment", "ပေးချေမှု")}:</span> {selectedLogDetails.source.paymentStatus || "—"} · {(selectedLogDetails.source.amountPaid || 0).toLocaleString()} Ks</p></>}{selectedLogDetails.sourceType === "PURCHASE_ORDER" && <><p><span className="font-semibold">{t("Supplier", "ပေးသွင်းသူ")}:</span> {selectedLogDetails.source.supplier?.name || "—"}</p><p><span className="font-semibold">{t("Supplier contact", "ပေးသွင်းသူ ဆက်သွယ်ရန်")}:</span> {selectedLogDetails.source.supplier?.contact || selectedLogDetails.source.supplier?.email || "—"}</p><p><span className="font-semibold">{t("Payment", "ပေးချေမှု")}:</span> {selectedLogDetails.source.paymentStatus || "—"} · {(selectedLogDetails.source.amountPaid || 0).toLocaleString()} Ks</p></>}{selectedLogDetails.sourceType === "POS_TRANSACTION" && <><p><span className="font-semibold">{t("Cashier", "ငွေကိုင်")}:</span> {selectedLogDetails.source.staff?.name || "—"}</p><p><span className="font-semibold">{t("Total", "စုစုပေါင်း")}:</span> {(selectedLogDetails.source.total || 0).toLocaleString()} Ks · {selectedLogDetails.source.paymentMethod || "—"}</p></>}{selectedLogDetails.sourceType === "TRANSFER" && <p>{t("This log is one side of a stock transfer. The note identifies the destination or source branch.", "ဤမှတ်တမ်းသည် စတော့လွှဲပြောင်းမှု၏ တစ်ဖက်ဖြစ်ပြီး မှတ်ချက်တွင် သွားမည့်/လာမည့် ဆိုင်ခွဲကို ဖော်ပြထားပါသည်။")}</p>}</div> : <p className="mt-2 text-sm text-muted-foreground">{t("No linked order was found. This may be a manual adjustment or an older log.", "ချိတ်ဆက်ထားသော အမှာစာ မတွေ့ပါ။ လက်ဖြင့်ပြင်ဆင်မှု သို့မဟုတ် အဟောင်းမှတ်တမ်း ဖြစ်နိုင်ပါသည်။")}</p>}</div>
+            <div className="rounded-lg bg-muted/40 p-3 sm:col-span-2"><p className="text-xs font-semibold text-muted-foreground">{t("Notes / Reference", "မှတ်ချက် / ကိုးကားချက်")}</p><p className="mt-1 whitespace-pre-wrap">{selectedLog.note || t("No note was recorded.", "မှတ်ချက် မရှိပါ။")}</p></div>
+          </div>}
+          <DialogFooter><Button variant="outline" onClick={() => setSelectedLog(null)}>{t("Close", "ပိတ်ရန်")}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Transfer Stock Overlay Modal */}
       <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
