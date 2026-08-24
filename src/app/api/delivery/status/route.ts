@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { StockChangeReason } from "@prisma/client"
-import { getAuthStaff } from "@/lib/auth-helper"
+import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper"
 
 export async function PATCH(request: Request) {
   try {
@@ -28,65 +27,13 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Sales order not found" }, { status: 404 })
     }
 
-    // Branch Isolation Check for Manager/Cashier
-    if (staff.role !== "OWNER" && staff.branchId !== existing.branchId) {
-      return NextResponse.json({ error: "Forbidden: Branch isolation violation" }, { status: 403 })
-    }
+    if (existing.status !== "DELIVERING" || !existing.isDelivery) return NextResponse.json({ error: "Only orders sent to Delivery can be marked delivered." }, { status: 400 })
+    if (!['PENDING', 'DELIVERED'].includes(deliveryStatus)) return NextResponse.json({ error: "Invalid delivery status." }, { status: 400 })
+    const permission = checkStaffPermission(staff, "salesOrders", "write", existing.branchId)
+    if (!permission.allowed) return permission.errorResponse || NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    const order = await prisma.salesOrder.update({ where: { id: salesOrderId }, data: { deliveryStatus, status: deliveryStatus === "DELIVERED" ? "COMPLETED" : "DELIVERING" } })
+    return NextResponse.json({ success: true, order })
 
-    const updated = await prisma.$transaction(async (tx) => {
-      // Stock deduction logic: If order status is NOT COMPLETED (e.g. CONFIRMED), deduct stock now!
-      if (deliveryStatus === "DELIVERED" && existing.status !== "COMPLETED") {
-        for (const item of existing.items) {
-          await tx.stockLevel.upsert({
-            where: {
-              branchId_variantId: {
-                branchId: existing.branchId,
-                variantId: item.variantId,
-              },
-            },
-            update: {
-              quantity: { decrement: item.quantity },
-            },
-            create: {
-              branchId: existing.branchId,
-              variantId: item.variantId,
-              quantity: -item.quantity,
-            },
-          })
-
-          await tx.inventoryLog.create({
-            data: {
-              branchId: existing.branchId,
-              variantId: item.variantId,
-              change: -item.quantity,
-              reason: StockChangeReason.SALES_ORDER_DELIVERED,
-              note: `Delivery confirmed for Order #${existing.id.slice(-6).toUpperCase()}`,
-            },
-          })
-        }
-      }
-
-      return await tx.salesOrder.update({
-        where: { id: salesOrderId },
-        data: {
-          deliveryStatus: deliveryStatus as "PENDING" | "DELIVERED",
-          ...(deliveryStatus === "DELIVERED" ? { status: "COMPLETED" } : {}),
-        },
-        include: {
-          customer: true,
-          branch: { select: { id: true, name: true } },
-          items: {
-            include: {
-              variant: {
-                include: { product: true },
-              },
-            },
-          },
-        },
-      })
-    })
-
-    return NextResponse.json({ success: true, order: updated })
   } catch (error) {
     console.error("PATCH /api/delivery/status error:", error)
     return NextResponse.json(

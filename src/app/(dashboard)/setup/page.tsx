@@ -441,6 +441,7 @@ export default function ProductsPage() {
           <Button
             variant="outline"
             className="h-10 text-xs font-bold gap-1 shadow-sm"
+            disabled={loading || actionLoading}
             onClick={() => setIsCatOpen(true)}
           >
             <FolderPlus className="h-4 w-4" />
@@ -449,6 +450,7 @@ export default function ProductsPage() {
 
           <Button
             className="h-10 text-xs font-bold gap-1 shadow-sm"
+            disabled={loading || actionLoading}
             onClick={() => openForm(null)}
           >
             <Plus className="h-4 w-4" />
@@ -836,7 +838,7 @@ export default function ProductsPage() {
               >
                 {t("Cancel", "ပယ်ဖျက်မည်")}
               </Button>
-              <Button type="submit" disabled={actionLoading} className="font-bold">
+              <Button type="submit" disabled={loading || actionLoading} className="font-bold">
                 {actionLoading && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
                 <span>{t("Save Product", "သိမ်းဆည်းမည်")}</span>
               </Button>
@@ -903,7 +905,7 @@ export default function ProductsPage() {
               required
               className="flex-1 h-10 bg-muted/10 border-border text-sm"
             />
-            <Button type="submit" disabled={actionLoading} className="h-10 text-xs font-bold gap-1 shrink-0">
+            <Button type="submit" disabled={loading || actionLoading} className="h-10 text-xs font-bold gap-1 shrink-0">
               <Plus className="h-4 w-4" />
               <span>Create</span>
             </Button>

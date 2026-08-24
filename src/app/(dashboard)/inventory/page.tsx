@@ -826,7 +826,7 @@ export default function InventoryPage() {
               >
                 {t("Cancel", "ပယ်ဖျက်မည်")}
               </Button>
-              <Button type="submit" disabled={actionLoading} className="font-bold shrink-0">
+              <Button type="submit" disabled={loading || actionLoading} className="font-bold shrink-0">
                 {actionLoading && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
                 <span>{t("Execute Transfer", "ပစ္စည်းလွှဲပြောင်းမည်")}</span>
               </Button>
@@ -989,7 +989,7 @@ export default function InventoryPage() {
               >
                 {t("Cancel", "ပယ်ဖျက်မည်")}
               </Button>
-              <Button type="submit" disabled={actionLoading} className="font-bold shrink-0">
+              <Button type="submit" disabled={loading || actionLoading} className="font-bold shrink-0">
                 {actionLoading && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
                 <span>{t("Save Changes", "သိမ်းဆည်းမည်")}</span>
               </Button>

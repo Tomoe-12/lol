@@ -181,6 +181,7 @@ export default function BranchesPage() {
 
         <Button
           className="h-10 text-xs font-bold gap-1 shadow-sm shrink-0"
+          disabled={loading || actionLoading}
           onClick={() => {
             setError(null)
             setIsBranchFormOpen(true)
@@ -259,6 +260,7 @@ export default function BranchesPage() {
                             size="icon"
                             variant="ghost"
                             className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive text-muted-foreground"
+                            disabled={loading || actionLoading}
                             onClick={() => {
                               setDeleteError(null)
                               setDeleteConfirmationText("")
@@ -272,6 +274,7 @@ export default function BranchesPage() {
                             size="sm"
                             variant="ghost"
                             className="h-8 px-2 text-xs font-bold text-primary hover:bg-primary/5"
+                            disabled={loading || actionLoading}
                             onClick={() => handleRestoreBranch(branch.id)}
                           >
                             {t("Restore", "ပြန်ဖွင့်မည်")}
@@ -344,7 +347,7 @@ export default function BranchesPage() {
             )}
 
             <DialogFooter className="flex-row gap-2 mt-4">
-              <Button type="button" variant="outline" className="w-1/2" onClick={() => setIsBranchFormOpen(false)}>
+              <Button type="button" variant="outline" className="w-1/2" disabled={actionLoading} onClick={() => setIsBranchFormOpen(false)}>
                 {t("Cancel", "မလုပ်တော့ပါ")}
               </Button>
               <Button type="submit" disabled={actionLoading} className="w-1/2 font-bold">

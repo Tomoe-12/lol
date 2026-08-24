@@ -239,52 +239,8 @@ export async function POST(request: Request) {
         });
       }
 
-      // 3. If delivery, customerId is provided, or paymentMethod is DEBT or amountPaid < total, create linked SalesOrder for delivery & outstanding tracking
-      const paidAmount = paymentMethod === "DEBT" ? (cashReceived || 0) : (paymentMethod === "CASH" || paymentMethod === "CARD" || paymentMethod === "QR" ? totalInMMK : (cashReceived || totalInMMK));
-      const isPartialOrDebt = paymentMethod === "DEBT" || paidAmount < totalInMMK;
-
-      if (body.isDelivery || body.customerId || isPartialOrDebt) {
-        await tx.salesOrder.create({
-          data: {
-            branchId,
-            customerId: body.customerId || null,
-            status: "COMPLETED",
-            paymentStatus: isPartialOrDebt ? "PARTIAL" : "PAID",
-            paymentMethod: paymentMethod as PaymentMethod,
-            subtotal,
-            discount: discountAmount,
-            total: totalInMMK,
-            amountPaid: Math.min(paidAmount, totalInMMK),
-            note: note || (body.isDelivery ? "POS Delivery Order" : "POS Transaction"),
-            isDelivery: Boolean(body.isDelivery),
-            deliveryStatus: "PENDING",
-            deliveryCustomerName: body.deliveryCustomerName || null,
-            deliveryPhone: body.deliveryPhone || null,
-            deliveryAddress: body.deliveryAddress || null,
-            items: {
-              create: normalizedItems.map((item) => ({
-                variantId: item.variantId || item.productId,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                unitCost: item.costPrice || 0,
-                discount: item.discount || 0,
-                total: (item.unitPrice * item.quantity) - (item.discount || 0),
-              })),
-            },
-            ...(paidAmount > 0 ? {
-              payments: {
-                create: {
-                  amount: Math.min(paidAmount, totalInMMK),
-                  method: paymentMethod as PaymentMethod,
-                  note: "Initial payment at POS checkout",
-                },
-              },
-            } : {}),
-          },
-        });
-      }
-
-      // 4. Log Audit Activity
+      // 3. Log Audit Activity. Sales Orders are fulfilled separately through
+      // /api/pos/fulfill-sales-order and are never created by a normal voucher.
       await tx.auditLog.create({
         data: {
           staffId,

@@ -165,7 +165,7 @@ export default function CustomersPage() {
           </p>
         </div>
         {(role === "OWNER" || role === "MANAGER") && (
-          <Button onClick={() => setIsModalOpen(true)} className="gap-2 font-bold shadow-md">
+          <Button onClick={() => setIsModalOpen(true)} disabled={loading || saving} className="gap-2 font-bold shadow-md">
             <Plus className="h-4 w-4" />
             Add Customer
           </Button>
@@ -246,7 +246,7 @@ export default function CustomersPage() {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
+                        <Button variant="ghost" className="h-8 w-8 p-0" disabled={loading || saving}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -333,10 +333,10 @@ export default function CustomersPage() {
             </div>
 
             <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+              <Button type="button" variant="outline" disabled={saving} onClick={() => setIsModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={saving || !name}>
+              <Button type="submit" disabled={loading || saving || !name}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Customer
               </Button>

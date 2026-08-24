@@ -70,6 +70,26 @@ export async function GET(request: Request) {
       },
       orderBy: { createdAt: "desc" }
     });
+
+    const purchaseOrders = await prisma.purchaseOrder.findMany({
+      where: {
+        cashFlowDate: { gte: startDate, lte: endDate },
+        ...(effectiveBranchId ? { branchId: effectiveBranchId } : {})
+      },
+      select: {
+        id: true,
+        status: true,
+        paymentStatus: true,
+        amountPaid: true,
+        cashFlowAmount: true,
+        refundAmount: true,
+        cashFlowDate: true,
+        totalCost: true,
+        supplier: { select: { name: true } },
+        branch: { select: { name: true } }
+      },
+      orderBy: { cashFlowDate: "desc" }
+    });
     
     // Fetch Categories (for joining later if needed)
     const categories = await prisma.category.findMany();
@@ -90,6 +110,7 @@ export async function GET(request: Request) {
       transactions,
       orderPayments,
       expenses,
+      purchaseOrders,
       categories,
       salesOrders
     });

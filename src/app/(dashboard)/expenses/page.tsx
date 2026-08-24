@@ -242,7 +242,7 @@ export default function ExpensesPage() {
             {t("Track branch expenses and calculate net profit", "ဆိုင်ခွဲအလိုက် ကုန်ကျစရိတ်များနှင့် အသားတင်အမြတ် စာရင်းများ")}
           </p>
         </div>
-        <Button onClick={() => setIsFormOpen(true)}>
+        <Button onClick={() => setIsFormOpen(true)} disabled={loading || actionLoading}>
           <Plus className="h-4 w-4 mr-1" />
           {t("Log Expense", "စရိတ်စာရင်းသွင်းမည်")}
         </Button>
@@ -375,7 +375,7 @@ export default function ExpensesPage() {
             onChange={(e) => setFilterEndDate(e.target.value)}
           />
         </div>
-        <Button size="sm" onClick={applyFilters} className="mt-auto font-semibold">
+        <Button size="sm" onClick={applyFilters} disabled={loading || actionLoading} className="mt-auto font-semibold">
           {t("Apply Filters", "စစ်ထုတ်မည်")}
         </Button>
       </div>
@@ -541,7 +541,7 @@ export default function ExpensesPage() {
               </div>
             )}
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
+              <Button type="button" variant="outline" disabled={actionLoading} onClick={() => setIsFormOpen(false)}>
                 {t("Cancel", "မလုပ်တော့ပါ")}
               </Button>
               <Button type="submit" disabled={actionLoading}>

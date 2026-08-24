@@ -240,7 +240,7 @@ export default function SchedulePage() {
             {t("Schedule and manage staff work hours per branch", "ဝန်ထမ်း တာဝန်ကျချိန်ဇယားများ")}
           </p>
         </div>
-        <Button onClick={() => setIsFormOpen(true)} disabled={formStaff.length === 0}>
+        <Button onClick={() => setIsFormOpen(true)} disabled={loading || actionLoading || formStaff.length === 0}>
           <Plus className="h-4 w-4 mr-1" />
           Assign Shift
         </Button>
@@ -282,7 +282,7 @@ export default function SchedulePage() {
             onChange={(e) => setFilterEndDate(e.target.value)}
           />
         </div>
-        <Button onClick={handleApplyFilters} variant="outline" className="h-9 px-4">
+        <Button onClick={handleApplyFilters} disabled={loading || actionLoading} variant="outline" className="h-9 px-4">
           Apply Filters
         </Button>
       </div>
@@ -416,7 +416,7 @@ export default function SchedulePage() {
             )}
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
+              <Button type="button" variant="outline" disabled={actionLoading} onClick={() => setIsFormOpen(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={actionLoading}>

@@ -25,10 +25,11 @@ export async function GET(request: Request) {
       return permCheck.errorResponse;
     }
 
-    // Fetch all confirmed/completed sales orders where amountPaid < total
+    // Outstanding is created only after a confirmed order is sent to Delivery.
     const outstandingOrders = await prisma.salesOrder.findMany({
       where: {
-        status: { in: ["CONFIRMED", "COMPLETED"] },
+        isDelivery: true,
+        status: { in: ["DELIVERING", "COMPLETED"] },
         paymentStatus: { not: "PAID" },
         ...(effectiveBranchId ? { branchId: effectiveBranchId } : {}),
         ...(customerIdParam ? { customerId: customerIdParam } : {}),
@@ -62,7 +63,8 @@ export async function GET(request: Request) {
     });
 
     const mappedDebts = outstandingOrders.map((o) => {
-      const remainingDebt = Math.max(0, o.total - o.amountPaid);
+      const deliveryFeeDue = o.deliveryFeePayer === "CUSTOMER" ? o.deliveryFee : 0;
+      const remainingDebt = Math.max(0, o.total + deliveryFeeDue - o.amountPaid);
       const lastPayment = o.payments[0] || null;
       return {
         id: o.id,
@@ -72,7 +74,7 @@ export async function GET(request: Request) {
         customerId: o.customerId,
         customerName: o.customer?.name || "Walk-in Customer",
         customerPhone: o.customer?.phone || null,
-        total: o.total,
+        total: o.total + deliveryFeeDue,
         amountPaid: o.amountPaid,
         remainingDebt,
         paymentStatus: o.paymentStatus,

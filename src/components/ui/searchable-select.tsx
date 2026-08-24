@@ -149,21 +149,21 @@ export function SearchableSelect<T>({
                 e.preventDefault()
                 e.stopPropagation()
                 // @ts-expect-error - generic id property
-                onChange(item.id)
+                onChange(value === item.id ? "" : item.id)
                 setOpen(false)
               }}
               onMouseDown={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
                 // @ts-expect-error - generic id property
-                onChange(item.id)
+                onChange(value === item.id ? "" : item.id)
                 setOpen(false)
               }}
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
                 // @ts-expect-error - generic id property
-                onChange(item.id)
+                onChange(value === item.id ? "" : item.id)
                 setOpen(false)
               }}
             >

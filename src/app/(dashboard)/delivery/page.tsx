@@ -403,6 +403,7 @@ export default function DeliveryPage() {
                             variant="outline"
                             size="sm"
                             className="h-8 text-xs font-semibold flex items-center gap-1.5"
+                            disabled={loading || updatingId !== null}
                             onClick={() => {
                               setSelectedWaybill(ord)
                               setIsWaybillOpen(true)
@@ -417,7 +418,7 @@ export default function DeliveryPage() {
                               type="button"
                               size="sm"
                               className="h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5"
-                              disabled={updatingId === ord.id}
+                              disabled={loading || updatingId !== null}
                               onClick={() => handleMarkAsDelivered(ord.id)}
                             >
                               {updatingId === ord.id ? (

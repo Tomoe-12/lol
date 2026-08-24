@@ -420,7 +420,7 @@ export default function StaffPage() {
         </div>
         {canWriteStaff && (
           <div>
-            <Button onClick={() => handleOpenStaffForm()}>
+            <Button onClick={() => handleOpenStaffForm()} disabled={loading || actionLoading}>
               <Plus className="h-4 w-4 mr-1" />
               {t("Add Staff Member", "ဝန်ထမ်းသစ်ထည့်ရန်")}
             </Button>
@@ -463,7 +463,7 @@ export default function StaffPage() {
         </select>
 
         {(filterBranch || filterRole) && (
-          <Button variant="ghost" size="sm" onClick={() => { setFilterBranch(""); setFilterRole(""); setStaffPage(1); }}>
+          <Button variant="ghost" size="sm" disabled={loading || actionLoading} onClick={() => { setFilterBranch(""); setFilterRole(""); setStaffPage(1); }}>
             <Filter className="h-3.5 w-3.5 mr-1" />Clear
           </Button>
         )}
@@ -671,7 +671,7 @@ export default function StaffPage() {
               <Button type="button" variant="outline" onClick={() => setIsStaffFormOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={actionLoading}>
+              <Button type="submit" disabled={loading || actionLoading}>
                 {actionLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {editingStaff ? "Update Staff" : "Create Staff"}
               </Button>
@@ -779,7 +779,7 @@ export default function StaffPage() {
                 {selectedStaffForPerms?.role === "OWNER" ? "Close" : "Cancel"}
               </Button>
               {selectedStaffForPerms?.role !== "OWNER" && (
-                <Button type="submit" disabled={permsSaving}>
+                <Button type="submit" disabled={loading || permsSaving}>
                   {permsSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   {t("Save Permissions", "အခွင့်အရေးများ သိမ်းဆည်းရန်")}
                 </Button>

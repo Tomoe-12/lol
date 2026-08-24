@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper";
 import { PaymentMethod } from "@prisma/client";
 
+const validPaymentMethods = new Set<PaymentMethod>([PaymentMethod.CASH, PaymentMethod.CARD, PaymentMethod.QR]);
+
 export async function POST(request: Request) {
   try {
     const { staff, errorResponse } = await getAuthStaff(request);
@@ -32,12 +34,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Sales order not found." }, { status: 404 });
     }
 
+    if (order.status === "DRAFT") {
+      return NextResponse.json(
+        { error: "Draft Sales Orders must receive their deposit through Sales Orders before fulfillment." },
+        { status: 400 }
+      );
+    }
+
     const permCheck = checkStaffPermission(staff, "outstanding", "write", order.branchId);
     if (!permCheck.allowed && permCheck.errorResponse) {
       return permCheck.errorResponse;
     }
 
-    const currentRemaining = Math.max(0, order.total - order.amountPaid);
+    if (!validPaymentMethods.has(method as PaymentMethod)) return NextResponse.json({ error: "Payment method must be Cash, Card, or QR." }, { status: 400 });
+    const deliveryFeeDue = order.deliveryFeePayer === "CUSTOMER" ? order.deliveryFee : 0;
+    const currentRemaining = Math.max(0, order.total + deliveryFeeDue - order.amountPaid);
     if (amount > currentRemaining) {
       return NextResponse.json(
         { error: `Payment amount (${amount.toLocaleString()} Ks) cannot exceed remaining debt (${currentRemaining.toLocaleString()} Ks).` },
@@ -46,7 +57,7 @@ export async function POST(request: Request) {
     }
 
     const newAmountPaid = order.amountPaid + amount;
-    const isFullyPaid = newAmountPaid >= order.total;
+    const isFullyPaid = newAmountPaid >= order.total + deliveryFeeDue;
     const newPaymentStatus = isFullyPaid ? "PAID" : "PARTIAL";
     const paymentMethodEnum: PaymentMethod = (method as PaymentMethod) || "CASH";
 
@@ -68,8 +79,6 @@ export async function POST(request: Request) {
           amountPaid: newAmountPaid,
           paymentStatus: newPaymentStatus,
           paymentMethod: paymentMethodEnum,
-          // If draft and fully paid, auto-confirm
-          ...(order.status === "DRAFT" ? { status: "CONFIRMED" } : {}),
         },
         include: {
           customer: true,

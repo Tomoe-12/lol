@@ -154,7 +154,7 @@ export default function SuppliersPage() {
             {t("Manage your supplier directory", "ပေးသွင်းသူ လမ်းညွှန်များ စီမံရန်")}
           </p>
         </div>
-        <Button onClick={() => openSupplierForm()} className="font-bold gap-2">
+        <Button onClick={() => openSupplierForm()} disabled={loading || actionLoading} className="font-bold gap-2">
           <Plus className="h-4 w-4" />
           {t("Add Supplier", "ပေးသွင်းသူ အသစ်ထည့်မည်")}
         </Button>
@@ -189,10 +189,10 @@ export default function SuppliersPage() {
                 <div className="flex justify-between items-start mb-4">
                   <h3 className="font-bold text-lg leading-tight">{sup.name}</h3>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openSupplierForm(sup)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" disabled={loading || actionLoading} onClick={() => openSupplierForm(sup)}>
                       <Edit2 className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteSupplierTarget(sup.id)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive" disabled={loading || actionLoading} onClick={() => setDeleteSupplierTarget(sup.id)}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -261,8 +261,8 @@ export default function SuppliersPage() {
               </div>
             )}
             <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setIsSupplierOpen(false)}>{t("Cancel", "မလုပ်တော့ပါ")}</Button>
-              <Button type="submit" disabled={actionLoading}>{t("Save", "သိမ်းဆည်းမည်")}</Button>
+              <Button type="button" variant="outline" disabled={actionLoading} onClick={() => setIsSupplierOpen(false)}>{t("Cancel", "မလုပ်တော့ပါ")}</Button>
+              <Button type="submit" disabled={loading || actionLoading}>{t("Save", "သိမ်းဆည်းမည်")}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

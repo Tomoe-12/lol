@@ -44,6 +44,18 @@
   --radius-sm: calc(var(--radius) - 4px);
 }
 
+.sales-orders-page select option[value="DEBT"] {
+  display: none;
+}
+
+.sales-order-fulfillment-dialog select:first-of-type {
+  display: none;
+}
+
+.sales-order-fulfillment-dialog label:has(+ select:first-of-type) {
+  display: none;
+}
+
 :root {
   --radius: 0.625rem;
 
@@ -178,4 +190,3 @@ body {
     display: none !important;
   }
 }
-

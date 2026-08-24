@@ -49,6 +49,8 @@ export default function ReportsPage() {
     categories: any[],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     salesOrders: any[]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    purchaseOrders: any[]
   } | null>(null)
 
   // Date & Branch State
@@ -215,6 +217,13 @@ export default function ReportsPage() {
     }
   }, [data])
 
+  const purchaseCashFlowSummary = useMemo(() => {
+    if (!data) return { outflow: 0, refunds: 0, net: 0 }
+    const outflow = data.purchaseOrders.reduce((sum, order) => sum + (order.cashFlowAmount || 0), 0)
+    const refunds = data.purchaseOrders.reduce((sum, order) => sum + (order.refundAmount || 0), 0)
+    return { outflow, refunds, net: outflow - refunds }
+  }, [data])
+
   // 5. Profit & Loss Time Series
   const pnlData = useMemo(() => {
     if (!data) return []
@@ -354,7 +363,7 @@ export default function ReportsPage() {
 
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center rounded-md border bg-muted/50 p-1">
-            <Button
+            <Button disabled={loading}
               variant={dateRange === "LAST_7" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setDateRange("LAST_7")}
@@ -362,7 +371,7 @@ export default function ReportsPage() {
             >
               {t("Last 7 Days", "လွန်ခဲ့သော ၇ ရက်")}
             </Button>
-            <Button
+            <Button disabled={loading}
               variant={dateRange === "LAST_30" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setDateRange("LAST_30")}
@@ -370,7 +379,7 @@ export default function ReportsPage() {
             >
               {t("Last 30 Days", "လွန်ခဲ့သော ရက် ၃၀")}
             </Button>
-            <Button
+            <Button disabled={loading}
               variant={dateRange === "CUSTOM" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setDateRange("CUSTOM")}
@@ -400,7 +409,7 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>{t("Total Revenue", "စုစုပေါင်း ဝင်ငွေ")}</CardDescription>
@@ -425,6 +434,12 @@ export default function ReportsPage() {
             <CardTitle className={`text-2xl ${(salesSummary.grossProfit - expenseSummary.total) >= 0 ? "text-emerald-600" : "text-destructive"}`}>
               {loading ? "..." : `${(salesSummary.grossProfit - expenseSummary.total).toLocaleString()} Ks`}
             </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>{t("Supplier Cash Flow", "ပေးသွင်းသူ ငွေစီးဆင်းမှု")}</CardDescription>
+            <CardTitle className="text-2xl text-red-600">{loading ? "..." : `${purchaseCashFlowSummary.net.toLocaleString()} Ks`}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -573,13 +588,13 @@ export default function ReportsPage() {
           <div className="flex justify-between items-center print:hidden">
             <h3 className="text-lg font-bold">{t("Top Selling Products", "အရောင်းရဆုံး ပစ္စည်းများ")}</h3>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => exportCSV("Product_Performance", [
+              <Button variant="outline" size="sm" disabled={loading} onClick={() => exportCSV("Product_Performance", [
                 ["Product", "Category", "Quantity Sold", "Revenue (Ks)"],
                 ...productPerformance.map(p => [p.name, p.category, p.qty, p.revenue])
               ])}>
                 <Download className="h-4 w-4 mr-2"/> {t("Export CSV", "CSV ထုတ်ယူမည်")}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Button variant="outline" size="sm" disabled={loading} onClick={() => window.print()}>
                 {t("Export PDF", "PDF ထုတ်ယူမည်")}
               </Button>
             </div>
@@ -612,6 +627,17 @@ export default function ReportsPage() {
               </TableBody>
             </Table>
           </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle>{t("Supplier Payment Cash Flow", "ပေးသွင်းသူ ပေးချေမှု ငွေစီးဆင်းမှု")}</CardTitle>
+              <CardDescription>{t("Payments are recorded only when goods are received or an order is cancelled.", "ပစ္စည်းလက်ခံခြင်း သို့မဟုတ် အမှာစာပယ်ဖျက်ခြင်းအချိန်တွင်သာ မှတ်တမ်းတင်ပါသည်။")}</CardDescription>
+            </CardHeader>
+            <div className="px-6 pb-6 grid grid-cols-3 gap-4 text-sm">
+              <div><p className="text-muted-foreground">{t("Outflow", "ထွက်ငွေ")}</p><p className="font-bold text-destructive">{purchaseCashFlowSummary.outflow.toLocaleString()} Ks</p></div>
+              <div><p className="text-muted-foreground">{t("Refunds", "ပြန်အမ်းငွေ")}</p><p className="font-bold text-emerald-600">{purchaseCashFlowSummary.refunds.toLocaleString()} Ks</p></div>
+              <div><p className="text-muted-foreground">{t("Net", "အသားတင်")}</p><p className="font-black">{purchaseCashFlowSummary.net.toLocaleString()} Ks</p></div>
+            </div>
+          </Card>
         </TabsContent>
 
         {/* STAFF TAB */}
@@ -619,13 +645,13 @@ export default function ReportsPage() {
           <div className="flex justify-between items-center print:hidden">
             <h3 className="text-lg font-bold">{t("Staff Performance", "ဝန်ထမ်းအလိုက် ဆောင်ရွက်ချက်")}</h3>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => exportCSV("Staff_Performance", [
+              <Button variant="outline" size="sm" disabled={loading} onClick={() => exportCSV("Staff_Performance", [
                 ["Staff Name", "Role", "Transactions", "POS Revenue", "Order Revenue", "Total Revenue"],
                 ...staffPerformance.map(s => [s.name, s.role, s.txCount, s.posRevenue, s.orderRevenue, s.posRevenue + s.orderRevenue])
               ])}>
                 <Download className="h-4 w-4 mr-2"/> {t("Export CSV", "CSV ထုတ်ယူမည်")}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Button variant="outline" size="sm" disabled={loading} onClick={() => window.print()}>
                 {t("Export PDF", "PDF ထုတ်ယူမည်")}
               </Button>
             </div>
@@ -669,7 +695,7 @@ export default function ReportsPage() {
           <div className="flex justify-between items-center print:hidden">
             <h3 className="text-lg font-bold">{t("Expense Log", "စရိတ် မှတ်တမ်း")}</h3>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => exportCSV("Expenses_Log", [
+              <Button variant="outline" size="sm" disabled={loading} onClick={() => exportCSV("Expenses_Log", [
                 ["Date", "Branch", "Category", "Amount", "Note"],
                 ...expenseSummary.items.map(e => [
                   format(new Date(e.createdAt), "yyyy-MM-dd HH:mm"),
@@ -681,7 +707,7 @@ export default function ReportsPage() {
               ])}>
                 <Download className="h-4 w-4 mr-2"/> {t("Export CSV", "CSV ထုတ်ယူမည်")}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Button variant="outline" size="sm" disabled={loading} onClick={() => window.print()}>
                 {t("Export PDF", "PDF ထုတ်ယူမည်")}
               </Button>
             </div>

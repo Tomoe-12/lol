@@ -16,6 +16,7 @@ export interface CartItem {
     barcode?: string | null;
     costPrice?: number;
     price?: number;
+    stockLevels?: { branchId: string; quantity: number }[];
   } | null;
   quantity: number;
   unitPrice: number; // base price

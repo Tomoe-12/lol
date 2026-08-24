@@ -355,7 +355,7 @@ export default function PurchasesPage() {
               </select>
             </div>
           )}
-          <Button onClick={openCreate} className="font-bold gap-2">
+          <Button onClick={openCreate} disabled={loading || createLoading || receiveLoading} className="font-bold gap-2">
             <Plus className="h-4 w-4" />
             {t("New Purchase Order", "ဝယ်ယူမှု အမှာစာအသစ်")}
           </Button>
@@ -489,7 +489,7 @@ export default function PurchasesPage() {
             <div className="border-t border-border pt-4 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold uppercase text-foreground">{t("Order Items", "မှာယူမည့် ပစ္စည်းများ")}</label>
-                <Button type="button" variant="outline" size="sm" onClick={addFormItem} className="h-7 text-xs font-bold">
+                <Button type="button" variant="outline" size="sm" disabled={createLoading} onClick={addFormItem} className="h-7 text-xs font-bold">
                   <Plus className="h-3 w-3 mr-1" /> {t("Add Product", "ပစ္စည်း ထည့်မည်")}
                 </Button>
               </div>
@@ -546,7 +546,7 @@ export default function PurchasesPage() {
                       className="h-9 text-xs" title="Selling Price"
                     />
                   </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeFormItem(index)} disabled={formItems.length === 1} className="h-8 w-8 text-destructive">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeFormItem(index)} disabled={createLoading || formItems.length === 1} className="h-8 w-8 text-destructive">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -572,7 +572,7 @@ export default function PurchasesPage() {
             )}
 
             <DialogFooter className="pt-4 border-t border-border">
-              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>{t("Cancel", "မလုပ်တော့ပါ")}</Button>
+              <Button type="button" variant="outline" disabled={createLoading} onClick={() => setIsCreateOpen(false)}>{t("Cancel", "မလုပ်တော့ပါ")}</Button>
               <Button type="submit" disabled={createLoading} className="font-bold">
                 {createLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} {t("Submit Order", "အမှာစာ တင်မည်")}
               </Button>
@@ -657,7 +657,7 @@ export default function PurchasesPage() {
           </div>
 
           <DialogFooter className="mt-4 border-t border-border pt-4">
-            <Button variant="outline" onClick={() => setSelectedOrder(null)}>{t("Cancel", "မလုပ်တော့ပါ")}</Button>
+            <Button variant="outline" disabled={receiveLoading} onClick={() => setSelectedOrder(null)}>{t("Cancel", "မလုပ်တော့ပါ")}</Button>
             <Button onClick={handleReceive} disabled={receiveLoading} className="font-bold bg-primary text-primary-foreground">
               {receiveLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t("Confirm Receipt", "လက်ခံရရှိမှု အတည်ပြုမည်")}
@@ -746,7 +746,7 @@ export default function PurchasesPage() {
             </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelOrderConfirm(null)}>{t("No, Keep it", "မပယ်ဖျက်ပါ")}</Button>
+            <Button variant="outline" disabled={receiveLoading} onClick={() => setCancelOrderConfirm(null)}>{t("No, Keep it", "မပယ်ဖျက်ပါ")}</Button>
             <Button variant="destructive" onClick={() => {
               if (cancelOrderConfirm) {
                 handleCancelOrder(cancelOrderConfirm.id)

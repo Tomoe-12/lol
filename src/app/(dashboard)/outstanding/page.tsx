@@ -402,6 +402,7 @@ export default function OutstandingPage() {
                     <Button
                       size="sm"
                       onClick={() => handleOpenPayModal(item)}
+                      disabled={loading || submitting}
                       className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs"
                     >
                       <DollarSign className="h-3.5 w-3.5 mr-1" />

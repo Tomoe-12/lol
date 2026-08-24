@@ -188,6 +188,38 @@ export function Sidebar() {
 
   // Get role from Clerk public metadata (fresh after reload)
   const role = (user?.publicMetadata?.role as string) ?? "CASHIER"
+  const [pendingPurchaseCount, setPendingPurchaseCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    let active = true
+    if (!user?.id) {
+      setPendingPurchaseCount(null)
+      return () => { active = false }
+    }
+    const refreshPendingPurchaseCount = () => {
+      fetch("/api/purchase-orders")
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error("Unable to load purchase orders")))
+        .then((data) => {
+          if (!active) return
+          const count = (data.orders || []).filter((order: { status?: string }) => order.status === "ORDERED" || order.status === "DRAFT").length
+          setPendingPurchaseCount(count)
+        })
+        .catch(() => {
+          if (active) setPendingPurchaseCount(null)
+        })
+    }
+    const handlePurchaseOrdersUpdated = () => refreshPendingPurchaseCount()
+    refreshPendingPurchaseCount()
+    window.addEventListener("purchase-orders-updated", handlePurchaseOrdersUpdated)
+    window.addEventListener("focus", handlePurchaseOrdersUpdated)
+    const refreshTimer = window.setInterval(refreshPendingPurchaseCount, 15000)
+    return () => {
+      active = false
+      window.removeEventListener("purchase-orders-updated", handlePurchaseOrdersUpdated)
+      window.removeEventListener("focus", handlePurchaseOrdersUpdated)
+      window.clearInterval(refreshTimer)
+    }
+  }, [user?.id])
 
   const filteredNav = navItems.filter((item) => {
     if (item.moduleKey) {
@@ -243,6 +275,11 @@ export function Sidebar() {
                   {!collapsed && (
                     <>
                       <span className="flex-1">{title}</span>
+                      {item.href === "/purchase-orders" && pendingPurchaseCount !== null && (
+                        <Badge variant="destructive" className="text-[10px] py-0 px-1.5 h-4 min-w-4 justify-center">
+                          {pendingPurchaseCount}
+                        </Badge>
+                      )}
                       {item.badgeEn && item.badgeMy && (
                         <Badge variant="success" className="text-[10px] py-0 px-1.5 h-4">
                           {t(item.badgeEn, item.badgeMy)}

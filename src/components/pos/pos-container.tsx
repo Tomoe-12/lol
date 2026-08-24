@@ -10,10 +10,11 @@ import { HoldListDialog } from "./hold-list-dialog"
 import { PaymentDialog } from "./payment-dialog"
 import { ReceiptView, type ReceiptTransaction } from "./receipt-view"
 import { SalesHistoryDialog } from "./sales-history-dialog"
+import { SalesOrderFulfillmentDialog } from "./sales-order-fulfillment-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { User, LogOut, KeyRound, Building, History } from "lucide-react"
+import { User, LogOut, KeyRound, Building, History, ClipboardCheck } from "lucide-react"
 import { useLanguage } from "@/providers/language-provider"
 import { useUser } from "@/providers/auth-provider"
 import type { Branch, Category, Product, StaffSession } from "@/types/pos"
@@ -73,6 +74,7 @@ export function POSContainer({
   const [isBranchSelectOpen, setIsBranchSelectOpen] = React.useState(false)
   const [isRateOpen, setIsRateOpen] = React.useState(false)
   const [isHistoryOpen, setIsHistoryOpen] = React.useState(false)
+  const [isFulfillmentOpen, setIsFulfillmentOpen] = React.useState(false)
 
   // API State
   const [currentReceipt, setCurrentReceipt] = React.useState<ReceiptTransaction | null>(null)
@@ -245,6 +247,16 @@ export function POSContainer({
             <span>{t("History", "မှတ်တမ်း")}</span>
           </Button>
 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsFulfillmentOpen(true)}
+            className="text-xs font-bold border-primary/40 text-primary hover:bg-primary/10 gap-1.5"
+          >
+            <ClipboardCheck className="h-3.5 w-3.5" />
+            <span>{t("Fulfill Order", "အမှာစာ ဖြည့်ဆည်းရန်")}</span>
+          </Button>
+
         </div>
       </header>
 
@@ -386,6 +398,13 @@ export function POSContainer({
           setCurrentReceipt(receipt)
           setIsReceiptOpen(true)
         }}
+      />
+
+      <SalesOrderFulfillmentDialog
+        isOpen={isFulfillmentOpen}
+        onClose={() => setIsFulfillmentOpen(false)}
+        branchId={activeBranchId}
+        onSuccess={handleCheckoutSuccess}
       />
     </div>
   )
