@@ -133,13 +133,6 @@ async function main() {
 
   console.log("✅ 9 Staff members created (1 Owner, 4 Managers, 4 Cashiers).");
 
-  // ─── Exchange Rates ─────────────────────────────────────────────────────────
-  for (const br of allBranches) {
-    await prisma.exchangeRate.create({
-      data: { mmkPerUsd: 4500, setByStaffId: owner.id, branchId: br.id }
-    });
-  }
-
   // ─── Categories ─────────────────────────────────────────────────────────────
   const catNames = ["Beverages", "Alcohol & Spirits", "Snacks & Biscuits", "Personal Care", "Instant Noodles", "Rice & Staples"];
   const cat: Record<string, string> = {};
@@ -263,7 +256,7 @@ async function main() {
       discountAmount: 0,
       total: tx1Subtotal,
       currency: "MMK",
-      exchangeRate: 4500,
+      exchangeRate: 1,
       totalInMMK: tx1Subtotal,
       paymentMethod: PaymentMethod.CASH,
       cashReceived: 10000,
@@ -289,7 +282,7 @@ async function main() {
       discountAmount: 0,
       total: tx2Subtotal,
       currency: "MMK",
-      exchangeRate: 4500,
+      exchangeRate: 1,
       totalInMMK: tx2Subtotal,
       paymentMethod: PaymentMethod.CARD,
       cashReceived: null,

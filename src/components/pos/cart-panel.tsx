@@ -16,7 +16,6 @@ interface CartPanelProps {
 export function CartPanel({ onCheckoutClick, onHoldCartsClick }: CartPanelProps) {
   const { t } = useLanguage()
   const items = useCartStore((state) => state.items)
-  const exchangeRate = useCartStore((state) => state.exchangeRate)
   const activeBranchId = useCartStore((state) => state.activeBranchId)
   const orderDiscount = useCartStore((state) => state.orderDiscount)
   const orderDiscountType = useCartStore((state) => state.orderDiscountType)
@@ -56,7 +55,6 @@ export function CartPanel({ onCheckoutClick, onHoldCartsClick }: CartPanelProps)
   }
 
   const grandTotalMMK = Math.max(0, subtotal - itemsDiscountTotal - finalOrderDiscount)
-  const grandTotalUSD = grandTotalMMK / exchangeRate
 
   const handleApplyOrderDiscount = () => {
     setDiscountError(null)
@@ -297,10 +295,6 @@ export function CartPanel({ onCheckoutClick, onHoldCartsClick }: CartPanelProps)
             <div className="flex justify-between items-center text-sm font-extrabold text-foreground">
               <span>{t("Grand Total:", "ကျသင့်ငွေ:")}</span>
               <span className="text-lg font-black">{grandTotalMMK.toLocaleString()} Ks</span>
-            </div>
-            <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
-              <span>{t("USD equivalent:", "ဒေါ်လာတန်ဖိုး:")}</span>
-              <span>${grandTotalUSD.toFixed(2)} USD</span>
             </div>
           </div>
         </div>

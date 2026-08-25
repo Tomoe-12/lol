@@ -149,16 +149,16 @@ async function runM2BusinessLifecyclesSuite() {
     assertEqual(lowPriceRes.status, 400, "POS Checkout selling price below cost price must be rejected with 400");
   }
 
-  // A.3: Valid POS Checkout Execution with Delivery Checkbox Toggle & USD Currency
+  // A.3: Valid POS Checkout Execution with Delivery Checkbox Toggle in MMK
   const posCheckoutReq = makeReq("http://localhost/api/pos/checkout", "POST", {
     branchId: branch.id,
     staffId: staff.id,
     customerId: customer?.id || null,
-    subtotal: 10, // $10 USD
+    subtotal: 35000,
     discountAmount: 0,
-    total: 10,
-    currency: "USD",
-    exchangeRate: 3500, // 35,000 MMK total
+    total: 35000,
+    currency: "MMK",
+    exchangeRate: 1,
     paymentMethod: "CASH",
     cashReceived: 35000,
     changeGiven: 0,
@@ -171,7 +171,7 @@ async function runM2BusinessLifecyclesSuite() {
         product: { id: product1.id },
         selectedVariant: { id: variant1.id, costPrice: variant1.costPrice },
         quantity: 2,
-        unitPrice: 5, // $5 each
+          unitPrice: 17500,
         discount: 0,
       },
     ],
@@ -202,7 +202,7 @@ async function runM2BusinessLifecyclesSuite() {
     include: { items: true },
   });
   assertOk(dbTx !== null, "Transaction ledger entry exists in DB");
-  assertEqual(dbTx?.totalInMMK, 35000, "Transaction totalInMMK converted correctly ($10 * 3500 = 35,000 MMK)");
+  assertEqual(dbTx?.totalInMMK, 35000, "Transaction totalInMMK is recorded in MMK");
   assertEqual(dbTx?.items.length, 1, "Transaction item count equals 1");
 
   // A.6: Verify Linked Sales Order creation for delivery toggle
@@ -211,7 +211,7 @@ async function runM2BusinessLifecyclesSuite() {
     orderBy: { createdAt: "desc" },
   });
   assertOk(posLinkedSO !== null, "POS Checkout with isDelivery=true created a linked SalesOrder");
-  assertEqual(posLinkedSO?.status, "COMPLETED", "POS Linked SalesOrder status must be COMPLETED");
+  assertEqual(posLinkedSO?.status, "DELIVERING", "POS Linked SalesOrder status must be DELIVERING");
   assertEqual(posLinkedSO?.deliveryStatus, "PENDING", "POS Linked SalesOrder deliveryStatus must be PENDING");
 
   console.log("✅ LIFECYCLE A verified with 100% mathematical perfection.\n");

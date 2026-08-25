@@ -66,6 +66,8 @@ interface DeliveryOrder {
   createdAt: string
   status: "DRAFT" | "CONFIRMED" | "COMPLETED" | "CANCELLED"
   paymentStatus: "PARTIAL" | "PAID"
+  deliveryFee?: number | null
+  deliveryFeePayer?: string | null
   subtotal: number
   discount: number
   total: number
@@ -75,6 +77,13 @@ interface DeliveryOrder {
   deliveryCustomerName?: string | null
   deliveryPhone?: string | null
   deliveryAddress?: string | null
+  deliveryDelivererName?: string | null
+  deliveryDelivererPhone?: string | null
+  deliveryReceiverName?: string | null
+  deliveryReceiverPhone?: string | null
+  deliveryServiceName?: string | null
+  deliveryServicePhone?: string | null
+  deliveryReceiptNumber?: string | null
   branch: Branch
   customer?: Customer | null
   items: SalesOrderItem[]
@@ -101,6 +110,13 @@ export default function DeliveryPage() {
   // Modal / Waybill Print View
   const [selectedWaybill, setSelectedWaybill] = useState<DeliveryOrder | null>(null)
   const [isWaybillOpen, setIsWaybillOpen] = useState(false)
+  const [delivererName, setDelivererName] = useState("")
+  const [delivererPhone, setDelivererPhone] = useState("")
+  const [receiverName, setReceiverName] = useState("")
+  const [receiverPhone, setReceiverPhone] = useState("")
+  const [serviceName, setServiceName] = useState("")
+  const [servicePhone, setServicePhone] = useState("")
+  const [receiptNumber, setReceiptNumber] = useState("")
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   // Fetch Branches
@@ -146,13 +162,13 @@ export default function DeliveryPage() {
   }, [fetchDeliveries])
 
   // Mark as Delivered
-  const handleMarkAsDelivered = async (orderId: string) => {
+  const handleMarkAsDelivered = async (orderId: string, details?: Record<string, string>) => {
     setUpdatingId(orderId)
     try {
       const res = await fetch("/api/delivery/status", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ salesOrderId: orderId, deliveryStatus: "DELIVERED" }),
+        body: JSON.stringify({ salesOrderId: orderId, deliveryStatus: "DELIVERED", ...details }),
       })
       if (res.ok) {
         fetchDeliveries()
@@ -408,6 +424,13 @@ export default function DeliveryPage() {
                             disabled={loading || updatingId !== null}
                             onClick={() => {
                               setSelectedWaybill(ord)
+                              setDelivererName(ord.deliveryDelivererName || user?.name || "")
+                              setDelivererPhone(ord.deliveryDelivererPhone || "")
+                              setReceiverName(ord.deliveryReceiverName || ord.deliveryCustomerName || ord.customer?.name || "")
+                              setReceiverPhone(ord.deliveryReceiverPhone || ord.deliveryPhone || ord.customer?.phone || "")
+                              setServiceName(ord.deliveryServiceName || "")
+                              setServicePhone(ord.deliveryServicePhone || "")
+                              setReceiptNumber(ord.deliveryReceiptNumber || "")
                               setIsWaybillOpen(true)
                             }}
                           >
@@ -415,22 +438,6 @@ export default function DeliveryPage() {
                             <span>{t("Waybill", "ပြေစာ")}</span>
                           </Button>
 
-                          {ord.deliveryStatus === "PENDING" && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              className="h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5"
-                              disabled={loading || updatingId !== null}
-                              onClick={() => handleMarkAsDelivered(ord.id)}
-                            >
-                              {updatingId === ord.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                              )}
-                              <span>{t("Mark Delivered", "ပို့ပြီးပြီ")}</span>
-                            </Button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -460,9 +467,9 @@ export default function DeliveryPage() {
 
       {/* Printable Delivery Waybill Modal */}
       <Dialog open={isWaybillOpen} onOpenChange={setIsWaybillOpen}>
-        <DialogContent className="max-w-md bg-card border-border p-6 rounded-2xl">
-          <DialogHeader className="border-b border-border pb-3">
-            <DialogTitle className="text-lg font-black flex items-center justify-between">
+        <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto bg-card border-border p-0 rounded-2xl">
+          <DialogHeader className="border-b border-border bg-muted/20 px-6 py-5">
+            <DialogTitle className="text-xl font-black flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Truck className="h-5 w-5 text-primary" />
                 <span>{t("Delivery Waybill", "ပို့ဆောင်ရေး ပြေစာ")}</span>
@@ -474,21 +481,36 @@ export default function DeliveryPage() {
           </DialogHeader>
 
           {selectedWaybill && (
-            <div className="space-y-4 py-2 text-sm text-foreground">
+            <div className="space-y-5 px-6 py-4 text-sm text-foreground">
               {/* Delivery Details Header */}
-              <div className="p-3 bg-muted/30 rounded-xl border border-border space-y-2">
-                <div className="flex justify-between items-center text-xs">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border bg-muted/30 p-3 text-xs">
                   <span className="text-muted-foreground font-semibold">{t("Branch", "ဆိုင်ခွဲ")}:</span>
-                  <span className="font-bold">{selectedWaybill.branch?.name}</span>
+                  <p className="mt-1 font-bold">{selectedWaybill.branch?.name}</p>
                 </div>
-                <div className="flex justify-between items-center text-xs">
+                <div className="rounded-xl border bg-muted/30 p-3 text-xs">
                   <span className="text-muted-foreground font-semibold">{t("Date", "ရက်စွဲ")}:</span>
-                  <span>{new Date(selectedWaybill.createdAt).toLocaleDateString()}</span>
+                  <p className="mt-1 font-bold">{new Date(selectedWaybill.createdAt).toLocaleDateString()}</p>
+                </div>
+                <div className="rounded-xl border bg-muted/30 p-3 text-xs">
+                  <span className="text-muted-foreground font-semibold">Status:</span>
+                  <p className="mt-1 font-bold">{selectedWaybill.deliveryStatus}</p>
                 </div>
               </div>
 
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3"><div><p className="font-bold">Delivery service</p><p className="text-xs text-muted-foreground">Record the carrier and tracking reference.</p></div><Badge variant="outline">{selectedWaybill.deliveryFeePayer || "NO FEE"}</Badge></div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <label className="space-y-1 text-xs font-semibold"><span>Service name</span><Input value={serviceName} onChange={(event) => setServiceName(event.target.value)} placeholder="Royal Express" /></label>
+                  <label className="space-y-1 text-xs font-semibold"><span>Service phone</span><Input value={servicePhone} onChange={(event) => setServicePhone(event.target.value)} placeholder="09..." /></label>
+                  <label className="space-y-1 text-xs font-semibold"><span>Receipt / tracking no.</span><Input value={receiptNumber} onChange={(event) => setReceiptNumber(event.target.value)} placeholder="Required for express" /></label>
+                </div>
+                <div className="flex flex-wrap gap-x-6 gap-y-1 border-t border-primary/10 pt-3 text-xs"><span><span className="text-muted-foreground">Delivery fee:</span> <strong>{(selectedWaybill.deliveryFee || 0).toLocaleString()} Ks</strong></span><span><span className="text-muted-foreground">Paid by:</span> <strong>{selectedWaybill.deliveryFeePayer || "—"}</strong></span></div>
+              </div>
+
               {/* Customer Info Card */}
-              <div className="p-3.5 bg-primary/5 border border-primary/20 rounded-xl space-y-2">
+              <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Customer / receiver</p>
                 <div className="font-extrabold text-base flex items-center gap-2">
                   <User className="h-4 w-4 text-primary" />
                   <span>{selectedWaybill.deliveryCustomerName || selectedWaybill.customer?.name || "Customer"}</span>
@@ -508,54 +530,57 @@ export default function DeliveryPage() {
                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
                   {t("Delivery Items", "ပို့ဆောင်ရမည့် ပစ္စည်းများ")}
                 </span>
-                <div className="divide-y divide-border border border-border rounded-xl overflow-hidden bg-muted/10">
+                <div className="divide-y divide-border border border-border rounded-xl overflow-hidden bg-card">
                   {selectedWaybill.items.map((item) => (
-                    <div key={item.id} className="p-2.5 flex items-center justify-between text-xs font-semibold">
+                    <div key={item.id} className="p-3 flex items-center justify-between gap-4 text-xs font-semibold">
                       <div className="flex items-center gap-2">
                         <input type="checkbox" className="h-3.5 w-3.5 rounded border-gray-300 text-primary" readOnly defaultChecked />
                         <span>{item.variant.product.name} ({item.variant.name})</span>
                       </div>
-                      <span className="font-extrabold">x {item.quantity}</span>
+                      <span className="shrink-0 rounded-md bg-muted px-2 py-1 font-extrabold">Qty {item.quantity}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Total & Payment Status */}
-              <div className="p-3 bg-muted/40 rounded-xl border border-border flex justify-between items-center">
+              <div className="p-4 bg-primary/5 rounded-xl border border-primary/20 flex justify-between items-center">
                 <span className="text-xs font-semibold text-muted-foreground">{t("Total Order Value", "စုစုပေါင်း အမှာစာ ပမာဏ")}:</span>
                 <span className="text-base font-black text-primary">
                   {selectedWaybill.total.toLocaleString()} Ks
                 </span>
               </div>
-              <div className="grid grid-cols-3 gap-2 rounded-xl border border-border bg-muted/20 p-3 text-xs">
+              <div className="grid grid-cols-3 gap-3 rounded-xl border border-border bg-muted/20 p-4 text-xs">
                 <div><p className="text-muted-foreground">Payment status</p><p className="font-bold">{selectedWaybill.paymentStatus}</p></div>
                 <div><p className="text-muted-foreground">Paid</p><p className="font-bold text-emerald-600">{selectedWaybill.amountPaid.toLocaleString()} Ks</p></div>
                 <div><p className="text-muted-foreground">Balance</p><p className="font-bold text-amber-600">{Math.max(0, selectedWaybill.total - selectedWaybill.amountPaid).toLocaleString()} Ks</p></div>
               </div>
 
               {/* Customer Signature Box */}
-              <div className="pt-4 border-t border-dashed border-border flex justify-between items-end text-xs text-muted-foreground">
-                <div className="text-center w-28">
-                  <div className="border-b border-border pb-8"></div>
-                  <span className="mt-1 block font-semibold">{t("Deliverer", "ပို့ဆောင်သူ")}</span>
+              <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2 text-xs text-muted-foreground">
+                <div className="rounded-xl border bg-muted/20 p-3">
+                  <p className="mb-2 font-bold uppercase tracking-wider">Deliverer</p>
+                  <Input value={delivererName} onChange={(event) => setDelivererName(event.target.value)} placeholder="Name" className="h-8 text-xs text-center" />
+                  <Input value={delivererPhone} onChange={(event) => setDelivererPhone(event.target.value)} placeholder="Phone" className="mt-1 h-8 text-xs text-center" />
                 </div>
-                <div className="text-center w-28">
-                  <div className="border-b border-border pb-8"></div>
-                  <span className="mt-1 block font-semibold">{t("Receiver", "လက်ခံသူ")}</span>
+                <div className="rounded-xl border bg-muted/20 p-3">
+                  <p className="mb-2 font-bold uppercase tracking-wider">Receiver</p>
+                  <Input value={receiverName} onChange={(event) => setReceiverName(event.target.value)} placeholder="Name" className="h-8 text-xs text-center" />
+                  <Input value={receiverPhone} onChange={(event) => setReceiverPhone(event.target.value)} placeholder="Phone" className="mt-1 h-8 text-xs text-center" />
                 </div>
               </div>
             </div>
           )}
 
-          <DialogFooter className="border-t border-border pt-4 flex gap-2">
-            <Button type="button" variant="outline" className="w-1/2" onClick={() => setIsWaybillOpen(false)}>
+          <DialogFooter className="border-t border-border bg-muted/10 px-6 py-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setIsWaybillOpen(false)}>
               {t("Close", "ပိတ်မည်")}
             </Button>
-            <Button type="button" className="w-1/2 font-bold flex items-center gap-2" onClick={handlePrintWaybill}>
+            <Button type="button" variant="outline" className="font-bold flex items-center gap-2" onClick={handlePrintWaybill}>
               <Printer className="h-4 w-4" />
               <span>{t("Print Waybill", "ပြေစာထုတ်မည်")}</span>
             </Button>
+            {selectedWaybill?.deliveryStatus === "PENDING" && <Button type="button" className="font-bold bg-emerald-600 hover:bg-emerald-700" onClick={() => selectedWaybill && handleMarkAsDelivered(selectedWaybill.id, { delivererName, delivererPhone, receiverName, receiverPhone, serviceName, servicePhone, receiptNumber })}>Mark Delivered</Button>}
           </DialogFooter>
         </DialogContent>
       </Dialog>

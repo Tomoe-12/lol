@@ -97,7 +97,6 @@ export default function ExpensesPage() {
   const [expBranchId, setExpBranchId] = React.useState("")
   const [expCategory, setExpCategory] = React.useState<ExpenseCategory>("RENT")
   const [expAmount, setExpAmount] = React.useState("")
-  const [expCurrency, setExpCurrency] = React.useState("MMK")
   const [expNote, setExpNote] = React.useState("")
   const [expDate, setExpDate] = React.useState(new Date().toISOString().split("T")[0])
 
@@ -168,7 +167,7 @@ export default function ExpensesPage() {
           branchId: expBranchId,
           category: expCategory,
           amount: Number(expAmount),
-          currency: expCurrency,
+          currency: "MMK",
           note: expNote || undefined,
           date: expDate,
         }),
@@ -513,17 +512,7 @@ export default function ExpensesPage() {
                   required
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">{t("Currency", "ငွေကြေး")}</label>
-                <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer"
-                  value={expCurrency}
-                  onChange={(e) => setExpCurrency(e.target.value)}
-                >
-                  <option value="MMK">MMK (Kyat)</option>
-                  <option value="USD">USD</option>
-                </select>
-              </div>
+              <div className="flex items-end pb-2 text-sm font-semibold text-muted-foreground">MMK only</div>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">{t("Date *", "ရက်စွဲ *")}</label>

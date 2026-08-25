@@ -382,6 +382,13 @@ model SalesOrder {
   deliveryAddress      String?
   deliveryFee          Float            @default(0)
   deliveryFeePayer     DeliveryFeePayer?
+  deliveryDelivererName String?
+  deliveryDelivererPhone String?
+  deliveryReceiverName  String?
+  deliveryReceiverPhone String?
+  deliveryServiceName   String?
+  deliveryServicePhone  String?
+  deliveryReceiptNumber String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

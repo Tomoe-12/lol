@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper";
-import { DeliveryFeePayer, PaymentMethod, SalesOrderStatus, StockChangeReason, TransactionStatus } from "@prisma/client";
+import { DeliveryFeePayer, ExpenseCategory, PaymentMethod, SalesOrderStatus, StockChangeReason, TransactionStatus } from "@prisma/client";
 
 type FulfillmentItem = { variantId: string; quantity: number; unitPrice: number; discount?: number };
 const validPaymentMethods = new Set<PaymentMethod>([PaymentMethod.CASH, PaymentMethod.CARD, PaymentMethod.QR]);
@@ -113,6 +113,17 @@ export async function POST(request: Request) {
       const fullyFulfilled = refreshedItems.every((item) => item.fulfilledQuantity >= item.quantity);
       const finalStatus: SalesOrderStatus = fulfillmentMode === "DELIVERY" ? "DELIVERING" : (fullyFulfilled ? "COMPLETED" : "CONFIRMED");
       const updatedOrder = await tx.salesOrder.update({ where: { id: order.id }, data: { status: finalStatus, subtotal, discount: itemDiscount + orderDiscount, total, amountPaid: totalPaidAfter, paymentStatus: totalPaidAfter >= total ? "PAID" : "PARTIAL", ...(fulfillmentMode === "DELIVERY" ? { isDelivery: true, deliveryStatus: "PENDING", deliveryFee, deliveryFeePayer: body.deliveryFeePayer || null, deliveryCustomerName: order.customer?.name || null, deliveryPhone: body.deliveryPhone || order.customer?.phone || null, deliveryAddress: body.deliveryAddress || order.customer?.address || null } : {}) } });
+      if (fulfillmentMode === "DELIVERY" && deliveryFee > 0 && body.deliveryFeePayer === DeliveryFeePayer.STORE) {
+        await tx.expense.create({
+          data: {
+            branchId: order.branchId,
+            category: ExpenseCategory.OTHER,
+            amount: deliveryFee,
+            currency: "MMK",
+            note: `Delivery fee paid by store for Sales Order #${order.id.slice(-6).toUpperCase()}`,
+          },
+        });
+      }
       await tx.auditLog.create({ data: { staffId: staff.id, action: "SALES_ORDER_FULFILLED", details: `Fulfilled Sales Order #${order.id.slice(-6).toUpperCase()} through Sales Voucher.` } });
       return { created, updatedOrder };
     });

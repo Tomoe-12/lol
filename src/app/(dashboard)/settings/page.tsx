@@ -7,8 +7,6 @@ import { useLanguage } from "@/providers/language-provider";
 // ── Types ──────────────────────────────────────────────────────────────────
 interface GeneralSettings {
   appName: string;
-  currency: string;
-  defaultExchangeRate: number;
   timezone: string;
 }
 
@@ -38,8 +36,6 @@ const STORAGE_KEYS = {
 
 const defaultGeneral: GeneralSettings = {
   appName: "Inventory Management System",
-  currency: "MMK",
-  defaultExchangeRate: 2100,
   timezone: "Asia/Rangoon",
 };
 
@@ -177,35 +173,9 @@ export default function SettingsPage() {
             />
           </Field>
 
-          <Field label={t("Default Currency", "ငွေကြေး")}>
-            <select
-              value={general.currency}
-              onChange={(e) =>
-                setGeneral({ ...general, currency: e.target.value })
-              }
-              className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="MMK">MMK — Myanmar Kyat</option>
-              <option value="USD">USD — US Dollar</option>
-              <option value="THB">THB — Thai Baht</option>
-              <option value="SGD">SGD — Singapore Dollar</option>
-            </select>
-          </Field>
-
-          <Field label="Default USD Exchange Rate (1 USD = ? MMK)">
-            <input
-              type="number"
-              value={general.defaultExchangeRate}
-              onChange={(e) =>
-                setGeneral({
-                  ...general,
-                  defaultExchangeRate: Number(e.target.value),
-                })
-              }
-              min={1}
-              className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </Field>
+          <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            {t("Currency: MMK only", "ငွေကြေး: MMK သာ")}
+          </div>
 
           <Field label="Timezone">
             <select

@@ -38,14 +38,12 @@ interface CartState {
   items: CartItem[];
   activeBranchId: string;
   activeBranchName: string;
-  exchangeRate: number; // MMK per USD
   orderDiscount: number;
   orderDiscountType: "percentage" | "fixed";
   heldCarts: HeldCart[];
   
   // Actions
   setBranch: (id: string, name: string) => void;
-  setExchangeRate: (rate: number) => void;
   addItem: (item: Omit<CartItem, "id" | "unitPrice">) => void;
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
@@ -66,13 +64,11 @@ export const useCartStore = create<CartState>()(
       items: [],
       activeBranchId: "",
       activeBranchName: "",
-      exchangeRate: 4500, // Default MMK per USD
       orderDiscount: 0,
       orderDiscountType: "fixed",
       heldCarts: [],
 
       setBranch: (id, name) => set({ activeBranchId: id, activeBranchName: name }),
-      setExchangeRate: (rate) => set({ exchangeRate: rate }),
 
       addItem: (newItem) => {
         const variantId = newItem.selectedVariant?.id || "no-variant";

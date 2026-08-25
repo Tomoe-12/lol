@@ -86,9 +86,22 @@ interface InventoryLog {
   createdAt: string;
 }
 
+interface InventoryLogSource {
+  id?: string
+  orderNumber?: string
+  branch?: { name?: string }
+  customer?: { name?: string; phones?: string[]; phone?: string | null }
+  paymentStatus?: string
+  amountPaid?: number
+  supplier?: { name?: string; contact?: string | null; email?: string | null }
+  staff?: { name?: string }
+  total?: number
+  paymentMethod?: string
+}
+
 interface InventoryLogDetails {
   sourceType: string;
-  source: Record<string, any> | null;
+  source: InventoryLogSource | null;
 }
 
 export default function InventoryPage() {

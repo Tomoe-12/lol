@@ -213,16 +213,7 @@ async function main() {
 
   console.log("✅ Seeded Stock Levels for all Branches");
 
-  // 6. Create Initial Exchange Rate
-  await prisma.exchangeRate.create({
-    data: {
-      mmkPerUsd: 4500,
-      setByStaffId: owner.id,
-      branchId: mainBranch.id,
-    },
-  });
-
-  // 7. Seed Initial Expenses
+  // 6. Seed Initial Expenses
   await prisma.expense.createMany({
     data: [
       { branchId: mainBranch.id, category: "RENT", amount: 1500000, currency: "MMK", note: "Monthly Shop Rent" },

@@ -21,7 +21,6 @@ import { useLanguage } from "@/providers/language-provider"
 
 interface Stats {
   revenueMMK: number;
-  revenueUSD: number;
   transactionCount: number;
   lowStockCount: number;
   pendingReceivables: number;
@@ -82,7 +81,6 @@ export default function DashboardPage() {
   // API Data
   const [stats, setStats] = React.useState<Stats>({
     revenueMMK: 0,
-    revenueUSD: 0,
     transactionCount: 0,
     lowStockCount: 0,
     pendingReceivables: 0,
@@ -243,7 +241,6 @@ export default function DashboardPage() {
             ) : (
               <>
                 <div className="text-2xl font-black text-foreground">{stats.revenueMMK.toLocaleString()} Ks</div>
-                <p className="text-xs text-muted-foreground mt-1">≈ ${stats.revenueUSD.toFixed(2)} USD</p>
               </>
             )}
           </CardContent>

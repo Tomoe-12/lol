@@ -9,7 +9,7 @@ export async function PATCH(request: Request) {
     if (!staff) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const body = await request.json()
-    const { salesOrderId, deliveryStatus } = body
+    const { salesOrderId, deliveryStatus, delivererName, delivererPhone, receiverName, receiverPhone, serviceName, servicePhone, receiptNumber } = body
 
     if (!salesOrderId || !deliveryStatus) {
       return NextResponse.json(
@@ -29,9 +29,13 @@ export async function PATCH(request: Request) {
 
     if (existing.status !== "DELIVERING" || !existing.isDelivery) return NextResponse.json({ error: "Only orders sent to Delivery can be marked delivered." }, { status: 400 })
     if (!['PENDING', 'DELIVERED'].includes(deliveryStatus)) return NextResponse.json({ error: "Invalid delivery status." }, { status: 400 })
+    const normalizedServiceName = typeof serviceName === "string" ? serviceName.trim() : existing.deliveryServiceName || ""
+    const normalizedReceiptNumber = typeof receiptNumber === "string" ? receiptNumber.trim() : existing.deliveryReceiptNumber || ""
+    if (deliveryStatus === "DELIVERED" && !normalizedServiceName) return NextResponse.json({ error: "Enter the delivery service name." }, { status: 400 })
+    if (deliveryStatus === "DELIVERED" && normalizedServiceName.toLowerCase() !== "own staff delivery" && !normalizedReceiptNumber) return NextResponse.json({ error: "Enter the delivery receipt or tracking number for an external delivery service." }, { status: 400 })
     const permission = checkStaffPermission(staff, "delivery", "write", existing.branchId)
     if (!permission.allowed) return permission.errorResponse || NextResponse.json({ error: "Forbidden" }, { status: 403 })
-    const order = await prisma.salesOrder.update({ where: { id: salesOrderId }, data: { deliveryStatus, status: deliveryStatus === "DELIVERED" ? "COMPLETED" : "DELIVERING" } })
+    const order = await prisma.salesOrder.update({ where: { id: salesOrderId }, data: { deliveryStatus, status: deliveryStatus === "DELIVERED" ? "COMPLETED" : "DELIVERING", deliveryServiceName: normalizedServiceName || null, deliveryServicePhone: typeof servicePhone === "string" ? servicePhone.trim() || null : existing.deliveryServicePhone, deliveryReceiptNumber: normalizedReceiptNumber || null, ...(deliveryStatus === "DELIVERED" ? { deliveryDelivererName: typeof delivererName === "string" ? delivererName.trim() || null : null, deliveryReceiverName: typeof receiverName === "string" ? receiverName.trim() || null : null, deliveryDelivererPhone: typeof delivererPhone === "string" ? delivererPhone.trim() || null : null, deliveryReceiverPhone: typeof receiverPhone === "string" ? receiverPhone.trim() || null : null } : {}) } })
     return NextResponse.json({ success: true, order })
 
   } catch (error) {

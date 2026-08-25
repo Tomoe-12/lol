@@ -22,7 +22,6 @@ export function AddonVariantSelector({
   const { t } = useLanguage()
   const addItem = useCartStore((state) => state.addItem)
   const activeBranchId = useCartStore((state) => state.activeBranchId)
-  const exchangeRate = useCartStore((state) => state.exchangeRate)
 
   const [selectedVariant, setSelectedVariant] = React.useState<Variant | null>(null)
   const [quantity, setQuantity] = React.useState(1)
@@ -62,7 +61,6 @@ export function AddonVariantSelector({
 
   const basePrice = product.price || 0
   const totalPriceMMK = basePrice * quantity
-  const totalPriceUSD = totalPriceMMK / exchangeRate
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -157,9 +155,6 @@ export function AddonVariantSelector({
             </span>
             <span className="text-lg font-extrabold text-foreground">
               {totalPriceMMK.toLocaleString()} Ks
-            </span>
-            <span className="text-xs text-muted-foreground font-medium">
-              ≈ ${totalPriceUSD.toFixed(2)} USD
             </span>
           </div>
           <Button onClick={handleAddToCart} size="lg" className="px-8 font-semibold">

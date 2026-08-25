@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       TTL.NOTIFICATIONS,
       async () => {
         // Run queries in a single transaction to use one pooler connection
-        const [stockLevels, exchangeRates, criticalLogs] = await withRetry(() =>
+        const [stockLevels, criticalLogs] = await withRetry(() =>
           prisma.$transaction([
             // 1. Stock levels for low-stock alerts
             prisma.stockLevel.findMany({
@@ -29,22 +29,11 @@ export async function GET(request: Request) {
               },
             }),
 
-            // 2. Recent exchange rate updates
-            prisma.exchangeRate.findMany({
-              where: effectiveBranchId ? { branchId: effectiveBranchId } : undefined,
-              include: {
-                setByStaff: { select: { name: true } },
-                branch: { select: { name: true } },
-              },
-              orderBy: { createdAt: "desc" },
-              take: 5,
-            }),
-
-            // 3. Critical audit logs
+            // 2. Critical audit logs
             prisma.auditLog.findMany({
               where: {
                 action: {
-                  in: ["VOIDED", "REFUNDED", "INVENTORY_ADJUSTMENT", "EXCHANGE_RATE_UPDATE", "TRANSFER_STOCK"],
+                  in: ["VOIDED", "REFUNDED", "INVENTORY_ADJUSTMENT", "TRANSFER_STOCK"],
                 },
                 ...(effectiveBranchId ? { staff: { branchId: effectiveBranchId } } : {}),
               },
@@ -73,17 +62,6 @@ export async function GET(request: Request) {
             },
           }));
 
-        const exchangeAlerts = exchangeRates.map((r) => ({
-          type: "EXCHANGE_RATE",
-          title: "Exchange Rate Modified",
-          message: `Exchange rate updated to 1 USD = ${r.mmkPerUsd.toLocaleString()} Ks at ${r.branch.name} by ${r.setByStaff.name}`,
-          timestamp: r.createdAt.toISOString(),
-          metadata: {
-            rateId: r.id,
-            rate: r.mmkPerUsd,
-          },
-        }));
-
         const auditAlerts = criticalLogs.map((l) => ({
           type: "CRITICAL_LOG",
           title: `Action: ${l.action}`,
@@ -96,7 +74,6 @@ export async function GET(request: Request) {
 
         const allNotifications = [
           ...lowStockAlerts,
-          ...exchangeAlerts,
           ...auditAlerts,
         ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 

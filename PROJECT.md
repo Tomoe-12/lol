@@ -14,9 +14,9 @@
 | 2 | Manager Branch Isolation | Strict branch isolation and blocking cross-branch operations | M1 | R1 / Survey Defect 1 |
 | 3 | Manager Staff Permission Admin | Manager permission updates for same-branch Cashiers | M1 | R1 / Survey Defect 2 |
 | 4 | Cashier Restricted Boundaries | Blocking Cashier from /staff, /reports, /inventory, /purchase-orders, /expenses, /setup, /dashboard (403) | M1 | R1 |
-| 5 | POS Checkout & Split Payment | Multi-currency cash + non-cash split payment calculation | M2 | R2 |
+| 5 | POS Checkout & Split Payment | MMK cash + non-cash split payment calculation | M2 | R2 |
 | 6 | Cost Price Protection | Effective selling price protection (selling price >= variant cost price) | M2 | R2 |
-| 7 | Multi-Currency Exchange Rates | USD to MMK currency conversion during POS checkout | M2 | R2 |
+| 7 | MMK-Only Currency | All POS, order, expense, and delivery amounts are recorded in MMK | M2 | R2 |
 | 8 | Sales Order Pre-Orders & Deposit | 10% minimum advance deposit validation for partial payment orders | M2 | R2 |
 | 9 | Sales Order Confirmation & Refund | Confirmation stock check, cancellation refund capping, duplicate cancellation guard | M2 | R2 |
 | 10 | Delivery Management | Order DELIVERED status transition to COMPLETED, physical stock deduction, zero double-deduction | M3 | R2 |
@@ -34,7 +34,7 @@
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
 | M1 | RBAC Access Boundaries & Security | Verify Owner/Manager/Cashier access boundaries across 18 routes & fix Manager cross-branch SO check & staff permission edit HTTP 403 bug | None | DONE |
-| M2 | POS Checkout & Sales Order Lifecycle | Verify POS split payments, cost price bounds, exchange rates, 10% min deposit, order confirmation & refund logic | M1 | DONE |
+| M2 | POS Checkout & Sales Order Lifecycle | Verify POS split payments, cost price bounds, MMK-only amounts, 10% min deposit, order confirmation & refund logic | M1 | DONE |
 | M3 | Delivery, Debt Collection & i18n | Verify Delivery DELIVERED status stock deduction, debt repayment capping (`remainingDebt`), customer ledgers & fix i18n slashes | M1 | DONE |
 | M4 | Zero-Drift Audit & Concurrency | Fix concurrency stock drift in POS checkout, verify Moving Average Cost, and 100% StockLevel vs InventoryLog balance | M2, M3 | DONE |
 | M5 | Final E2E Suite & Adversarial Hardening | Execute full 13-suite test regression pass, pass E2E system suite, verify 0 defects, publish TEST_READY.md | M4 | DONE |

@@ -109,6 +109,10 @@ export async function POST(request: Request) {
       date?: string;
     };
 
+    if (currency !== undefined && currency !== "MMK") {
+      return NextResponse.json({ error: "Only MMK currency is supported" }, { status: 400 });
+    }
+
     // Non-owner staff are forced to use their assigned branchId; Owners can specify any branchId
     const targetBranchId = staff.role === Role.OWNER ? (bodyBranchId || staff.branchId) : staff.branchId;
 
@@ -133,7 +137,7 @@ export async function POST(request: Request) {
         branchId: targetBranchId,
         category,
         amount: Number(amount),
-        currency: currency ?? "MMK",
+        currency: "MMK",
         note,
         date: date ? new Date(date) : new Date(),
       },

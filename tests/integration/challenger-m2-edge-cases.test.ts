@@ -66,39 +66,38 @@ export async function runM2EdgeCasesStressTest() {
     process.exit(1);
   }
 
-  // 1. SPLIT PAYMENT ROUNDING & MULTI-CURRENCY CONVERSION
-  console.log("--- Edge Case 1: Split Payment Rounding & Multi-Currency USD Conversion ---");
-  const usdReq = makeReq("http://localhost/api/pos/checkout", "POST", {
+  // 1. MMK-ONLY CHECKOUT
+  console.log("--- Edge Case 1: MMK-only checkout ---");
+  const mmkReq = makeReq("http://localhost/api/pos/checkout", "POST", {
     branchId: branch.id,
     staffId: staff.id,
-    subtotal: 15.5, // $15.50
-    discountAmount: 0.5, // $0.50 discount
-    total: 15.0, // $15.00 total
-    currency: "USD",
-    exchangeRate: 3550, // 15 * 3550 = 53,250 MMK
+    subtotal: 15500,
+    discountAmount: 500,
+    total: 15000,
+    currency: "MMK",
+    exchangeRate: 1,
     paymentMethod: "CASH",
-    cashReceived: 53250,
+    cashReceived: 15000,
     changeGiven: 0,
     items: [
       {
         product: { id: products[0].id },
         selectedVariant: { id: variant1.id, costPrice: variant1.costPrice },
         quantity: 1,
-        unitPrice: 15.5,
-        discount: 0.5,
+        unitPrice: 15500,
+        discount: 500,
       },
     ],
   }, staff.id);
 
-  const usdRes = await posCheckout(usdReq);
-  const usdData = await usdRes.json();
-  assertEqual(usdRes.status, 200, "USD Checkout with fractional amount succeeds");
-  assertEqual(usdData.transaction.totalInMMK, 53250, "totalInMMK equals 15 * 3550 = 53,250 MMK without precision loss");
+  const mmkRes = await posCheckout(mmkReq);
+  const mmkData = await mmkRes.json();
+  assertEqual(mmkRes.status, 200, "MMK checkout succeeds");
+  assertEqual(mmkData.transaction.totalInMMK, 15000, "totalInMMK equals the MMK total");
 
-  // 2. USD EXCHANGE RATE EDGE CASES
-  console.log("\n--- Edge Case 2: USD Exchange Rate Edge Cases ---");
-  // Zero exchange rate should yield 0 MMK
-  const zeroRateReq = makeReq("http://localhost/api/pos/checkout", "POST", {
+  // 2. NON-MMK CURRENCY REJECTION
+  console.log("\n--- Edge Case 2: Non-MMK currency rejection ---");
+  const nonMmkReq = makeReq("http://localhost/api/pos/checkout", "POST", {
     branchId: branch.id,
     staffId: staff.id,
     subtotal: 10,
@@ -117,10 +116,8 @@ export async function runM2EdgeCasesStressTest() {
       },
     ],
   }, staff.id);
-  const zeroRateRes = await posCheckout(zeroRateReq);
-  const zeroRateData = await zeroRateRes.json();
-  assertEqual(zeroRateRes.status, 200, "POS Checkout with exchange rate 0 succeeds");
-  assertEqual(zeroRateData.transaction.totalInMMK, 0, "totalInMMK with rate 0 equals 0");
+  const nonMmkRes = await posCheckout(nonMmkReq);
+  assertEqual(nonMmkRes.status, 400, "Non-MMK checkout is rejected");
 
   // 3. OVERPAYMENT CAPPING (amount > remainingDebt)
   console.log("\n--- Edge Case 3: Overpayment Capping (amount > remainingDebt) ---");

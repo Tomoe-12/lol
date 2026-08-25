@@ -15,16 +15,23 @@ export async function POST(request: Request) {
       discountAmount,
       total,
       currency,
-      exchangeRate,
       paymentMethod,
       cashReceived,
       changeGiven,
       note,
       receiptEmail,
+      customerId,
+      isDelivery,
+      deliveryCustomerName,
+      deliveryPhone,
+      deliveryAddress,
       items,
     } = body;
 
-    let branchId = staff.role !== "OWNER" ? (staff.branchId || body.branchId) : (body.branchId || staff.branchId);
+    if (staff.role !== "OWNER" && body.branchId && body.branchId !== staff.branchId) {
+      return NextResponse.json({ error: "Forbidden: POS checkout is restricted to your assigned branch" }, { status: 403 });
+    }
+    let branchId = staff.role !== "OWNER" ? staff.branchId : (body.branchId || staff.branchId);
 
     // Validate branchId exists in database to prevent P2003 foreign key constraint errors
     const targetBranch = branchId ? await prisma.branch.findUnique({
@@ -53,6 +60,10 @@ export async function POST(request: Request) {
       }
     }
 
+    if (currency !== undefined && currency !== "MMK") {
+      return NextResponse.json({ error: "Only MMK currency is supported" }, { status: 400 });
+    }
+
     const staffId = staff.id;
 
     const permCheck = checkStaffPermission(staff, "pos", "write", branchId);
@@ -66,6 +77,10 @@ export async function POST(request: Request) {
         { error: "Missing required fields: branchId, staffId, or items" },
         { status: 400 }
       );
+    }
+
+    if (isDelivery && (!deliveryCustomerName || !deliveryPhone || !deliveryAddress)) {
+      return NextResponse.json({ error: "Delivery customer name, phone, and address are required" }, { status: 400 });
     }
 
     // 1. Discount Validation (R1)
@@ -148,7 +163,7 @@ export async function POST(request: Request) {
         if (effectiveSellingPrice < item.costPrice) {
           return NextResponse.json(
             {
-              error: `Selling price for ${item.productName} (${effectiveSellingPrice} Ks) cannot be lower than cost price (${item.costPrice} Ks)`,
+              error: `Selling price for ${item.productName} (${effectiveSellingPrice.toLocaleString()} Ks) cannot be lower than cost price (${item.costPrice.toLocaleString()} Ks)`,
             },
             { status: 400 }
           );
@@ -159,7 +174,7 @@ export async function POST(request: Request) {
     // Run database operations in a transaction
     const transaction = await prisma.$transaction(async (tx) => {
       // 1. Create Transaction and TransactionItems
-      const totalInMMK = currency === "USD" ? total * exchangeRate : total;
+      const totalInMMK = total;
       
       const newTransaction = await tx.transaction.create({
         data: {
@@ -168,8 +183,8 @@ export async function POST(request: Request) {
           subtotal,
           discountAmount,
           total,
-          currency,
-          exchangeRate,
+          currency: "MMK",
+          exchangeRate: 1,
           totalInMMK,
           paymentMethod: paymentMethod as PaymentMethod,
           cashReceived,
@@ -239,13 +254,48 @@ export async function POST(request: Request) {
         });
       }
 
+      if (isDelivery) {
+        await tx.salesOrder.create({
+          data: {
+            branchId,
+            customerId: customerId || null,
+            status: "DELIVERING",
+            paymentStatus: "PAID",
+            depositStatus: "PAID",
+            subtotal,
+            discount: discountAmount,
+            total,
+            amountPaid: total,
+            paymentMethod: paymentMethod as PaymentMethod,
+            note: `POS transaction #${newTransaction.id}${note ? ` — ${note}` : ""}`,
+            isDelivery: true,
+            deliveryStatus: "PENDING",
+            deliveryCustomerName,
+            deliveryPhone,
+            deliveryAddress,
+            items: {
+              create: normalizedItems.map((item) => ({
+                variantId: item.variantId as string,
+                requestedQuantity: item.quantity,
+                quantity: item.quantity,
+                fulfilledQuantity: item.quantity,
+                unitPrice: item.unitPrice,
+                unitCost: item.costPrice || 0,
+                discount: item.discount || 0,
+                total: (item.unitPrice * item.quantity) - (item.discount || 0),
+              })),
+            },
+          },
+        });
+      }
+
       // 3. Log Audit Activity. Sales Orders are fulfilled separately through
       // /api/pos/fulfill-sales-order and are never created by a normal voucher.
       await tx.auditLog.create({
         data: {
           staffId,
           action: "CHECKOUT_COMPLETED",
-          details: `Processed transaction #${newTransaction.id} of total ${total} ${currency}.`,
+          details: `Processed transaction #${newTransaction.id} of total ${total} MMK.`,
         },
       });
 

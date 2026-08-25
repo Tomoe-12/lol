@@ -41,7 +41,6 @@ export async function GET(request: Request) {
         const [
           todayTransactions,
           last7DaysTransactions,
-          latestRateRecord,
           lowStockCountResult,
           totalStaffCount,
           branches,
@@ -73,10 +72,6 @@ export async function GET(request: Request) {
             },
             select: { branchId: true, total: true, createdAt: true },
             orderBy: { createdAt: "asc" },
-          }),
-          prisma.exchangeRate.findFirst({
-            orderBy: { createdAt: "desc" },
-            select: { mmkPerUsd: true },
           }),
           effectiveBranchId
             ? prisma.$queryRaw<[{ count: number | bigint }]>`
@@ -155,8 +150,6 @@ export async function GET(request: Request) {
     const totalPosRevenueMMK = todayTransactions.reduce((sum, tx) => sum + tx.total, 0);
     const totalOrderPaymentMMK = todayOrderPayments.reduce((sum, p) => sum + p.amount, 0);
     const totalRevenueMMK = totalPosRevenueMMK + totalOrderPaymentMMK;
-    const exchangeRate = latestRateRecord?.mmkPerUsd ?? 4500;
-    const totalRevenueUSD = totalRevenueMMK / exchangeRate;
     const transactionCount = todayTransactions.length + (todayOrderPayments.length > 0 ? 1 : 0); // Approx
     const lowStockCount = Number(lowStockCountResult[0]?.count ?? 0);
     const pendingReceivables = (pendingReceivablesAgg._sum.total ?? 0) - (pendingReceivablesAgg._sum.amountPaid ?? 0);
@@ -306,7 +299,6 @@ export async function GET(request: Request) {
           success: true,
           stats: {
             revenueMMK: totalRevenueMMK,
-            revenueUSD: totalRevenueUSD,
             transactionCount,
             lowStockCount,
             pendingReceivables,

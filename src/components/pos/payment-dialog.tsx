@@ -22,14 +22,12 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
   const { t } = useLanguage()
   const items = useCartStore((state) => state.items)
   const activeBranchId = useCartStore((state) => state.activeBranchId)
-  const exchangeRate = useCartStore((state) => state.exchangeRate)
   const orderDiscount = useCartStore((state) => state.orderDiscount)
   const orderDiscountType = useCartStore((state) => state.orderDiscountType)
   const clearCart = useCartStore((state) => state.clearCart)
 
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethodType>("CASH")
   const [cashReceivedMMK, setCashReceivedMMK] = React.useState<string>("")
-  const [cashReceivedUSD, setCashReceivedUSD] = React.useState<string>("")
   const [note, setNote] = React.useState<string>("")
   const [receiptEmail, setReceiptEmail] = React.useState<string>("")
   
@@ -52,7 +50,6 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
     if (isOpen) {
       setPaymentMethod("CASH")
       setCashReceivedMMK("")
-      setCashReceivedUSD("")
       setSplitCashMMK("")
       setSplitNonCashMMK("")
       setNote("")
@@ -81,15 +78,12 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
 
   const totalDiscount = itemsDiscountTotal + finalOrderDiscount
   const totalMMK = Math.max(0, subtotal - totalDiscount)
-  const totalUSD = totalMMK / exchangeRate
 
   // Live change calculations
   const mmkCash = parseFloat(cashReceivedMMK) || 0
-  const usdCash = parseFloat(cashReceivedUSD) || 0
-  const totalCashReceivedMMK = mmkCash + (usdCash * exchangeRate)
+  const totalCashReceivedMMK = mmkCash
   
   const changeMMK = totalCashReceivedMMK > 0 ? Math.max(0, totalCashReceivedMMK - totalMMK) : 0
-  const changeUSD = changeMMK / exchangeRate
 
   // Split payment validation
   const splitCash = parseFloat(splitCashMMK) || 0
@@ -214,7 +208,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
       discountAmount: totalDiscount,
       total: totalMMK, // Database stores totals in MMK as primary base
       currency: "MMK",
-      exchangeRate,
+      exchangeRate: 1,
       paymentMethod,
       cashReceived: paymentMethod === "CASH" ? totalCashReceivedMMK : (paymentMethod === "SPLIT" ? splitCash : null),
       changeGiven: paymentMethod === "CASH" ? changeMMK : null,
@@ -363,18 +357,6 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
                   </div>
                 </div>
 
-                <div className="space-y-1.5 pt-2">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase">
-                    {t("Cash Received (USD)", "လက်ခံရရှိငွေ (ဒေါ်လာ)")}
-                  </label>
-                  <Input
-                    type="number"
-                    placeholder="Enter $ amount"
-                    value={cashReceivedUSD}
-                    onChange={(e) => setCashReceivedUSD(e.target.value)}
-                    className="h-11 text-base font-bold bg-muted/20 border-border text-foreground"
-                  />
-                </div>
               </div>
             )}
 
@@ -480,10 +462,6 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
                   <span>{t("Grand Total:", "ကျသင့်ငွေ:")}</span>
                   <span className="text-xl text-foreground font-black">{totalMMK.toLocaleString()} Ks</span>
                 </div>
-                <div className="flex justify-between text-xs text-muted-foreground mt-0.5 font-semibold">
-                  <span>{t("In USD equivalent:", "ဒေါ်လာတန်ဖိုး:")}</span>
-                  <span>${totalUSD.toFixed(2)} USD</span>
-                </div>
               </div>
             </div>
 
@@ -495,9 +473,6 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
                 </span>
                 <span className="text-2xl font-black text-primary">
                   {changeMMK.toLocaleString()} Ks
-                </span>
-                <span className="text-xs text-muted-foreground font-semibold">
-                  ≈ ${changeUSD.toFixed(2)} USD (Exchange rate: 1 USD = {exchangeRate}Ks)
                 </span>
               </div>
             )}

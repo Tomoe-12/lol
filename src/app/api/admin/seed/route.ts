@@ -105,11 +105,6 @@ export async function POST(req: Request) {
     const cMdl2 = await prisma.staff.create({ data: { clerkId: "user_c_ml2", name: "Khin Myo", email: "khinmyo@pos.com", pin: "1402", role: Role.CASHIER, branchId: mdl.id } });
     const cMdl3 = await prisma.staff.create({ data: { clerkId: "user_c_ml3", name: "Zaw Lin",  email: "zawlin@pos.com",  pin: "1403", role: Role.CASHIER, branchId: mdl.id } });
 
-    // Exchange rates
-    for (let i = 0; i < 8; i++) {
-      await prisma.exchangeRate.create({ data: { mmkPerUsd: 4100 + i * 50, setByStaffId: owner.id, branchId: allBranches[i % 4].id, createdAt: daysAgo(8 - i) } });
-    }
-
     // Categories
     const catNames = [
       "Rice & Staples", "Beverages", "Dairy & Eggs", "Instant Noodles",
@@ -531,7 +526,6 @@ export async function POST(req: Request) {
       {sId:mgrTw.id,action:"STOCK_ADJUST",details:"Manual adjustment: +15 Red Bull Energy Can at Tamwe",days:25},
       {sId:mgrSch.id,action:"PURCHASE_ORDER",details:"Created PO for Unilever Myanmar Supplies 195,000 MMK",days:22},
       {sId:mgrHl.id,action:"PURCHASE_ORDER",details:"Created PO for Coca-Cola Pinya Bottles 240,000 MMK",days:47},
-      {sId:owner.id,action:"EXCHANGE_RATE_UPDATE",details:"Set rate to 4,500 MMK/USD",days:20},
       {sId:mgrTw.id,action:"EXPENSE_ADD",details:"Added wifi upgrade: 55,000 MMK at Tamwe",days:20},
       {sId:mgrHl.id,action:"EXPENSE_ADD",details:"Added electricity: 180,000 MMK at Hledan",days:15},
       {sId:mgrMdl.id,action:"EXPENSE_ADD",details:"Added POS scanner maintenance: 42,000 MMK at Mandalay",days:18},
@@ -539,12 +533,10 @@ export async function POST(req: Request) {
       {sId:mgrSch.id,action:"STOCK_TRANSFER",details:"Transferred 10 Coca-Cola: Sanchaung to Mandalay",days:10},
       {sId:cHl1.id,action:"VOID_TRANSACTION",details:"Voided transaction — customer request",days:9},
       {sId:cTw1.id,action:"VOID_TRANSACTION",details:"Voided transaction — wrong item scanned",days:7},
-      {sId:owner.id,action:"EXCHANGE_RATE_UPDATE",details:"Set rate to 4,450 MMK/USD",days:6},
       {sId:mgrMdl.id,action:"STOCK_ADJUST",details:"Received goods: +30 Coca-Cola Classic at Mandalay",days:5},
       {sId:owner.id,action:"PRODUCT_UPDATE",details:"Updated price: Pokka Green Tea 1L Bottle to 3,200 MMK",days:4},
       {sId:mgrSch.id,action:"STAFF_CLOCK",details:"Clocked out Tun Lin (forgotten clock out)",days:3},
       {sId:cMdl2.id,action:"VOID_TRANSACTION",details:"Voided transaction — payment issue",days:2},
-      {sId:owner.id,action:"EXCHANGE_RATE_UPDATE",details:"Set rate to 4,380 MMK/USD",days:1},
     ];
     await prisma.auditLog.createMany({
       data: audits.map(a => ({ staffId:a.sId,action:a.action,details:a.details,createdAt:daysAgo(a.days) }))

@@ -11,9 +11,9 @@ export interface ReceiptTransaction {
   subtotal: number;
   discountAmount: number;
   total: number;
-  currency: string;
-  exchangeRate: number;
-  totalInMMK: number;
+  currency?: string;
+  exchangeRate?: number;
+  totalInMMK?: number;
   paymentMethod: string;
   cashReceived: number | null;
   changeGiven: number | null;
@@ -76,7 +76,6 @@ export function ReceiptView({ transaction, isOpen, onClose }: ReceiptViewProps) 
 
   // Calculate totals
   const totalMMK = transaction.total
-  const totalUSD = totalMMK / transaction.exchangeRate
   const dateString = new Date(transaction.createdAt).toLocaleString()
 
   return (
@@ -160,10 +159,6 @@ export function ReceiptView({ transaction, isOpen, onClose }: ReceiptViewProps) 
             <div className="flex justify-between font-black text-xs text-foreground pt-1 border-t border-border/20 print:border-black/15 print:text-black">
               <span>{t("Grand Total:", "ကျသင့်ငွေ:")}</span>
               <span className="text-sm">{totalMMK.toLocaleString()} Ks</span>
-            </div>
-            <div className="flex justify-between text-[10px] text-muted-foreground print:text-black/70">
-              <span>{t("USD equivalent:", "ဒေါ်လာတန်ဖိုး:")}</span>
-              <span>${totalUSD.toFixed(2)} USD</span>
             </div>
             {transaction.cashReceived !== null && (
               <div className="flex justify-between font-semibold pt-1 border-t border-border/20 print:border-black/15">
