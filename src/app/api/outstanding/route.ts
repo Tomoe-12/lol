@@ -25,11 +25,10 @@ export async function GET(request: Request) {
       return permCheck.errorResponse;
     }
 
-    // Outstanding is created only after a confirmed order is sent to Delivery.
+    // Outstanding begins when a Sales Order is confirmed and remains until fully paid.
     const outstandingOrders = await prisma.salesOrder.findMany({
       where: {
-        isDelivery: true,
-        status: { in: ["DELIVERING", "COMPLETED"] },
+        status: { in: ["CONFIRMED", "DELIVERING", "COMPLETED"] },
         paymentStatus: { not: "PAID" },
         ...(effectiveBranchId ? { branchId: effectiveBranchId } : {}),
         ...(customerIdParam ? { customerId: customerIdParam } : {}),
@@ -74,14 +73,32 @@ export async function GET(request: Request) {
         customerId: o.customerId,
         customerName: o.customer?.name || "Walk-in Customer",
         customerPhone: o.customer?.phone || null,
+        customerEmail: o.customer?.email || null,
+        customerAddress: o.customer?.address || null,
         total: o.total + deliveryFeeDue,
         amountPaid: o.amountPaid,
         remainingDebt,
         paymentStatus: o.paymentStatus,
         status: o.status,
+        isDelivery: o.isDelivery,
+        deliveryStatus: o.deliveryStatus,
+        deliveryAddress: o.deliveryAddress,
+        deliveryPhone: o.deliveryPhone,
+        deliveryFee: o.deliveryFee,
+        deliveryFeePayer: o.deliveryFeePayer,
         createdAt: o.createdAt,
         lastPaymentDate: lastPayment?.createdAt || o.createdAt,
         itemsCount: o.items.length,
+        items: o.items.map((item) => ({
+          id: item.id,
+          productName: item.variant.product.name,
+          variantName: item.variant.name,
+          quantity: item.quantity,
+          requestedQuantity: item.requestedQuantity,
+          fulfilledQuantity: item.fulfilledQuantity,
+          unitPrice: item.unitPrice,
+          total: item.total,
+        })),
         payments: o.payments,
       };
     });

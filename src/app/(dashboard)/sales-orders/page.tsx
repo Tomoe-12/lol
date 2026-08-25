@@ -13,7 +13,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select"
 
 type Customer = { id: string; name: string; phone?: string | null; phones?: string[]; email?: string | null; address?: string | null }
 type Variant = { id: string; name: string; barcode?: string; price?: number; costPrice?: number; stockLevels?: { branchId: string; quantity: number }[]; product: { name: string; price?: number; costPrice?: number } }
-type OrderItem = { id: string; variantId: string; quantity: number; fulfilledQuantity: number; unitPrice?: number | null; variant: Variant }
+type OrderItem = { id: string; variantId: string; requestedQuantity?: number; quantity: number; fulfilledQuantity: number; unitPrice?: number | null; variant: Variant }
 type Order = { id: string; branchId: string; status: string; paymentStatus?: string; depositStatus: string; amountPaid: number; subtotal?: number; discount?: number; total?: number; note?: string | null; createdAt: string; updatedAt?: string; deliveryDate?: string | null; customer?: Customer | null; branch?: { name: string }; items: OrderItem[]; payments?: { amount: number; method: string; note?: string | null; createdAt: string }[] }
 
 function normalizePhone(value: string): string {
@@ -53,7 +53,14 @@ export default function SalesOrdersPage() {
   React.useEffect(() => { void load() }, [load])
   React.useEffect(() => { if (error) { const translated = localizeSalesOrderError(error, t); if (translated !== error) setError(translated) } }, [error, t])
   React.useEffect(() => { if (newCustomerError) { const translated = localizeSalesOrderError(newCustomerError, t); if (translated !== newCustomerError) setNewCustomerError(translated) } }, [newCustomerError, t])
-  React.useEffect(() => { if (view) setConfirmQuantities(Object.fromEntries(view.items.map((item) => [item.id, String(item.quantity)]))) }, [view])
+  React.useEffect(() => { if (view) setConfirmQuantities(Object.fromEntries(view.items.map((item) => [item.id, String(item.quantity)]))) }, [view?.id])
+  React.useEffect(() => {
+    if (!view || view.status !== "DRAFT") return
+    setView((current) => current ? {
+      ...current,
+      items: current.items.map((item) => ({ ...item, quantity: Number(confirmQuantities[item.id] || item.quantity) }))
+    } : current)
+  }, [confirmQuantities])
 
   const resetCreate = () => { setCustomerId(""); setSelectedBranch(user?.branchId || ""); setItems([{ variantId: "", quantity: 1 }]); setDeposit(""); setPaymentMethod("CASH"); setNote(""); setError(""); setNewCustomerOpen(false) }
   const duplicatePhone = React.useMemo(() => { const entered = newCustomer.phones.map(normalizePhone).filter(Boolean); if (new Set(entered).size !== entered.length) return "Each phone number must be unique."; const existing = customers.find((customer) => (customer.phones || [customer.phone || ""]).map(normalizePhone).some((phone) => entered.includes(phone))); return existing ? `This phone already belongs to ${existing.name}. Select that customer instead.` : "" }, [newCustomer.phones, customers])

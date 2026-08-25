@@ -41,6 +41,7 @@ interface Variant {
 
 interface SalesOrderItem {
   id: string
+  requestedQuantity?: number
   quantity: number
   unitPrice: number
   total: number
@@ -57,6 +58,7 @@ interface Customer {
   name: string
   phone: string
   address?: string | null
+  email?: string | null
 }
 
 interface DeliveryOrder {
@@ -525,6 +527,11 @@ export default function DeliveryPage() {
                 <span className="text-base font-black text-primary">
                   {selectedWaybill.total.toLocaleString()} Ks
                 </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 rounded-xl border border-border bg-muted/20 p-3 text-xs">
+                <div><p className="text-muted-foreground">Payment status</p><p className="font-bold">{selectedWaybill.paymentStatus}</p></div>
+                <div><p className="text-muted-foreground">Paid</p><p className="font-bold text-emerald-600">{selectedWaybill.amountPaid.toLocaleString()} Ks</p></div>
+                <div><p className="text-muted-foreground">Balance</p><p className="font-bold text-amber-600">{Math.max(0, selectedWaybill.total - selectedWaybill.amountPaid).toLocaleString()} Ks</p></div>
               </div>
 
               {/* Customer Signature Box */}

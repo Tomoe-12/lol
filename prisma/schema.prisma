@@ -396,6 +396,7 @@ model SalesOrderItem {
   salesOrder   SalesOrder     @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
   variantId    String
   variant      ProductVariant @relation(fields: [variantId], references: [id])
+  requestedQuantity Int        @default(1)
   quantity     Int
   fulfilledQuantity Int          @default(0)
   unitPrice    Float?

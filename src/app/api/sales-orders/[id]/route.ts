@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper";
 import { DepositStatus, PaymentMethod, SalesOrderStatus } from "@prisma/client";
 
-type OrderItemInput = { variantId: string; quantity: number; unitPrice?: number; discount?: number };
+type OrderItemInput = { variantId: string; quantity: number; requestedQuantity?: number; unitPrice?: number; discount?: number };
 const validPaymentMethods = new Set<PaymentMethod>([PaymentMethod.CASH, PaymentMethod.CARD, PaymentMethod.QR]);
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -23,10 +23,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const targetStatus = (body.status || existing.status) as SalesOrderStatus;
     if (!["DRAFT", "CONFIRMED", "CANCELLED"].includes(targetStatus)) return NextResponse.json({ error: "Sales Orders can only be Draft, Confirmed, or Cancelled. Complete them in Sales Voucher." }, { status: 400 });
 
-    const requestedItems: OrderItemInput[] = body.items || existing.items.map((item) => ({ variantId: item.variantId, quantity: item.quantity, unitPrice: item.unitPrice ?? undefined, discount: item.discount }));
+    const requestedItems: OrderItemInput[] = body.items || existing.items.map((item) => ({ variantId: item.variantId, quantity: item.quantity, requestedQuantity: item.requestedQuantity, unitPrice: item.unitPrice ?? undefined, discount: item.discount }));
     if (body.items !== undefined && existing.status !== "DRAFT") return NextResponse.json({ error: "Only draft Sales Orders can be edited." }, { status: 400 });
 
-    let normalizedItems: { variantId: string; quantity: number; unitPrice: number | null; unitCost: number | null; discount: number; total: number | null }[] | undefined;
+    let normalizedItems: { variantId: string; requestedQuantity: number; quantity: number; unitPrice: number | null; unitCost: number | null; discount: number; total: number | null }[] | undefined;
     let calculatedSubtotal = 0;
     let calculatedDiscount = 0;
     let calculatedTotal = 0;
@@ -50,7 +50,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         const catalogPrice = variant.price > 0 ? variant.price : variant.product.price;
         if (effectivePrice < variant.costPrice) throw new Error(`Agreed price for ${variant.product.name} cannot be below cost price.`);
         if (catalogPrice <= 0 || effectivePrice >= catalogPrice) throw new Error(`Agreed price for ${variant.product.name} must be below catalog price.`);
-        return { variantId: item.variantId, quantity, unitPrice, unitCost: variant.costPrice, discount, total: quantity * unitPrice - discount };
+        const requestedQuantity = Number(item.requestedQuantity ?? existing.items.find((existingItem) => existingItem.variantId === item.variantId)?.requestedQuantity ?? quantity);
+        if (!Number.isInteger(requestedQuantity) || requestedQuantity <= 0) throw new Error("Requested quantity must be a whole number greater than zero.");
+        return { variantId: item.variantId, requestedQuantity, quantity, unitPrice, unitCost: variant.costPrice, discount, total: quantity * unitPrice - discount };
       });
 
       for (const item of normalizedItems) {
@@ -70,7 +72,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       normalizedItems = requestedItems.map((item) => {
         const quantity = Number(item.quantity);
         if (!Number.isInteger(quantity) || quantity <= 0) throw new Error("Each requested quantity must be a whole number greater than zero.");
-        return { variantId: item.variantId, quantity, unitPrice: null, unitCost: null, discount: 0, total: null };
+        const requestedQuantity = Number(item.requestedQuantity ?? existing.items.find((existingItem) => existingItem.variantId === item.variantId)?.requestedQuantity ?? quantity);
+        return { variantId: item.variantId, requestedQuantity, quantity, unitPrice: null, unitCost: null, discount: 0, total: null };
       });
     }
 
@@ -90,7 +93,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const order = await prisma.$transaction(async (tx) => {
       if (normalizedItems) {
         await tx.salesOrderItem.deleteMany({ where: { salesOrderId: id } });
-        await tx.salesOrderItem.createMany({ data: normalizedItems.map((item) => ({ salesOrderId: id, variantId: item.variantId, quantity: item.quantity, fulfilledQuantity: 0, unitPrice: item.unitPrice, unitCost: item.unitCost, discount: item.discount, total: item.total })) });
+        await tx.salesOrderItem.createMany({ data: normalizedItems.map((item) => ({ salesOrderId: id, variantId: item.variantId, requestedQuantity: item.requestedQuantity, quantity: item.quantity, fulfilledQuantity: 0, unitPrice: item.unitPrice, unitCost: item.unitCost, discount: item.discount, total: item.total })) });
       }
       return tx.salesOrder.update({
         where: { id },

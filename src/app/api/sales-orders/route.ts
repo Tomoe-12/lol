@@ -6,6 +6,7 @@ import { DepositStatus, PaymentMethod, SalesOrderStatus } from "@prisma/client";
 export const dynamic = "force-dynamic";
 const validPaymentMethods = new Set<PaymentMethod>([PaymentMethod.CASH, PaymentMethod.CARD, PaymentMethod.QR]);
 
+
 export async function GET(request: Request) {
   try {
     const { staff, errorResponse } = await getAuthStaff(request);
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
         branchId, customerId, status, paymentStatus: "PARTIAL", depositStatus, amountPaid: deposit,
         paymentMethod: deposit > 0 ? paymentMethod : null, subtotal: 0, discount: 0, total: 0, note,
         deliveryDate: deliveryDate ? new Date(deliveryDate) : null, isDelivery: false,
-        items: { create: normalizedItems.map((item) => ({ variantId: item.variantId, quantity: item.quantity, fulfilledQuantity: 0, unitPrice: null, unitCost: null, total: null })) },
+        items: { create: normalizedItems.map((item) => ({ variantId: item.variantId, requestedQuantity: item.quantity, quantity: item.quantity, fulfilledQuantity: 0, unitPrice: null, unitCost: null, total: null })) },
         ...(deposit > 0 ? { payments: { create: { amount: deposit, method: paymentMethod, note: "Sales Order deposit" } } } : {}),
       },
       include: { customer: true, items: { include: { variant: { include: { product: true } } } }, payments: true },

@@ -23,6 +23,9 @@ import {
   FileText,
   Clock,
   ChevronRight,
+  Eye,
+  MapPin,
+  Package,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -54,6 +57,8 @@ interface DebtItem {
   customerId: string | null
   customerName: string
   customerPhone: string | null
+  customerEmail?: string | null
+  customerAddress?: string | null
   total: number
   amountPaid: number
   remainingDebt: number
@@ -68,6 +73,22 @@ interface DebtItem {
     method: string
     note: string | null
     createdAt: string
+  }>
+  isDelivery?: boolean
+  deliveryStatus?: string | null
+  deliveryAddress?: string | null
+  deliveryPhone?: string | null
+  deliveryFee?: number
+  deliveryFeePayer?: string | null
+  items: Array<{
+    id: string
+    productName: string
+    variantName: string
+    quantity: number
+    requestedQuantity?: number
+    fulfilledQuantity: number
+    unitPrice: number | null
+    total: number | null
   }>
 }
 
@@ -101,6 +122,7 @@ export default function OutstandingPage() {
 
   // Modal States
   const [payModalItem, setPayModalItem] = useState<DebtItem | null>(null)
+  const [detailItem, setDetailItem] = useState<DebtItem | null>(null)
   const [payAmount, setPayAmount] = useState<number>(0)
   const [payMethod, setPayMethod] = useState<"CASH" | "CARD" | "QR" | "SPLIT">("CASH")
   const [payNote, setPayNote] = useState("")
@@ -399,15 +421,20 @@ export default function OutstandingPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      onClick={() => handleOpenPayModal(item)}
-                      disabled={loading || submitting}
-                      className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs"
-                    >
-                      <DollarSign className="h-3.5 w-3.5 mr-1" />
-                      {t("Collect Debt", "ကြွေးဆပ်မည်")}
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setDetailItem(item)} disabled={loading || submitting}>
+                        <Eye className="h-3.5 w-3.5 mr-1" /> Details
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleOpenPayModal(item)}
+                        disabled={loading || submitting}
+                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs"
+                      >
+                        <DollarSign className="h-3.5 w-3.5 mr-1" />
+                        {t("Collect Debt", "ကြွေးဆပ်မည်")}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -422,6 +449,25 @@ export default function OutstandingPage() {
           onPageChange={setCurrentPage}
         />
       </div>
+
+      <Dialog open={!!detailItem} onOpenChange={(open) => !open && setDetailItem(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-amber-600" /> Order Details {detailItem && `#${detailItem.salesOrderId.slice(-6).toUpperCase()}`}</DialogTitle>
+            <DialogDescription>Customer, branch, fulfillment, payment, and product details.</DialogDescription>
+          </DialogHeader>
+          {detailItem && <div className="space-y-4 text-sm">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border p-3"><p className="mb-2 flex items-center gap-2 font-bold"><User className="h-4 w-4 text-primary" />Customer</p><p className="font-semibold">{detailItem.customerName}</p><p className="text-muted-foreground">{detailItem.customerPhone || "No phone"}</p><p className="text-muted-foreground">{detailItem.customerEmail || "No email"}</p><p className="mt-1 flex gap-1 text-muted-foreground"><MapPin className="h-4 w-4 shrink-0" />{detailItem.customerAddress || "No address"}</p></div>
+              <div className="rounded-xl border p-3"><p className="mb-2 flex items-center gap-2 font-bold"><Building className="h-4 w-4 text-primary" />Order</p><p>Branch: <strong>{detailItem.branchName}</strong></p><p>Status: <strong>{detailItem.status}</strong></p><p>Payment: <strong>{detailItem.paymentStatus}</strong></p><p>Created: <strong>{format(new Date(detailItem.createdAt), "MMM d, yyyy h:mm a")}</strong></p></div>
+            </div>
+            <div className="rounded-xl border p-3"><p className="mb-2 flex items-center gap-2 font-bold"><Package className="h-4 w-4 text-primary" />Products</p><div className="divide-y">{detailItem.items.map((item) => <div key={item.id} className="flex items-center justify-between gap-3 py-2"><div><p className="font-semibold">{item.productName}</p><p className="text-xs text-muted-foreground">{item.variantName} · requested {item.requestedQuantity ?? item.quantity} · fulfilled {item.fulfilledQuantity}</p></div><div className="text-right"><p className="font-bold">Order qty: {item.quantity}</p><p className="text-xs text-muted-foreground">{item.unitPrice ? `${item.unitPrice.toLocaleString()} Ks each` : "Price pending"}</p></div></div>)}</div></div>
+            <div className="grid gap-3 sm:grid-cols-3 rounded-xl bg-muted/40 p-3"><div><p className="text-xs text-muted-foreground">Total</p><p className="font-bold">{detailItem.total.toLocaleString()} Ks</p></div><div><p className="text-xs text-muted-foreground">Paid</p><p className="font-bold text-emerald-600">{detailItem.amountPaid.toLocaleString()} Ks</p></div><div><p className="text-xs text-muted-foreground">Remaining</p><p className="font-bold text-amber-600">{detailItem.remainingDebt.toLocaleString()} Ks</p></div></div>
+            {detailItem.isDelivery && <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3"><p className="mb-1 font-bold">Delivery</p><p>Status: <strong>{detailItem.deliveryStatus || "Pending"}</strong></p><p>Phone: {detailItem.deliveryPhone || detailItem.customerPhone || "—"}</p><p>Address: {detailItem.deliveryAddress || detailItem.customerAddress || "—"}</p></div>}
+          </div>}
+          <DialogFooter><Button variant="outline" onClick={() => setDetailItem(null)}>Close</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Collect Debt Payment Modal */}
       <Dialog open={!!payModalItem} onOpenChange={(open) => !open && setPayModalItem(null)}>
