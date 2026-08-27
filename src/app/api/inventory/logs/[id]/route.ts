@@ -10,7 +10,36 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params
     const log = await prisma.inventoryLog.findUnique({
       where: { id },
-      include: { branch: true, variant: { include: { product: true } } },
+      include: {
+        branch: true,
+        variant: { include: { product: true } },
+        performedBy: { select: { id: true, name: true, role: true } },
+        transaction: {
+          include: {
+            branch: true,
+            staff: { select: { id: true, name: true } },
+            customer: true,
+            items: { include: { product: true, variant: true } },
+          },
+        },
+        salesOrder: {
+          include: {
+            customer: true,
+            branch: true,
+            createdByStaff: { select: { id: true, name: true } },
+            items: { include: { variant: { include: { product: true } } } },
+          },
+        },
+        purchaseOrder: {
+          include: {
+            supplier: true,
+            branch: true,
+            createdBy: { select: { id: true, name: true } },
+            receivedBy: { select: { id: true, name: true } },
+            items: { include: { variant: { include: { product: true } } } },
+          },
+        },
+      },
     })
     if (!log) return NextResponse.json({ error: "Inventory log not found" }, { status: 404 })
     const permission = checkStaffPermission(staff, "inventory", "read", log.branchId)
@@ -19,7 +48,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     let source: Record<string, unknown> | null = null
     let sourceType = "ADJUSTMENT"
     const note = log.note || ""
-    if (log.reason === "PURCHASE_RECEIVED") {
+    if (log.salesOrder) {
+      sourceType = "SALES_ORDER"
+      source = log.salesOrder
+    } else if (log.transaction) {
+      sourceType = "POS_TRANSACTION"
+      source = log.transaction
+    } else if (log.purchaseOrder) {
+      sourceType = "PURCHASE_ORDER"
+      source = log.purchaseOrder
+    } else if (log.reason === "PURCHASE_RECEIVED") {
       sourceType = "PURCHASE_ORDER"
       const token = note.match(/Received PO #(.+)$/i)?.[1]
       const purchase = token ? await prisma.purchaseOrder.findFirst({ where: { OR: [{ id: token }, { id: { endsWith: token } }] }, include: { supplier: true, branch: true, createdBy: { select: { name: true } }, receivedBy: { select: { name: true } }, items: { include: { variant: { include: { product: true } } } } } }) : null

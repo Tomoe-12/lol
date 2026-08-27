@@ -5,6 +5,7 @@ import { useLanguage } from "@/providers/language-provider"
 import { Search, Loader2, Truck, Plus, Edit2, Trash2, Mail, Phone, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
 import { Card } from "@/components/ui/card"
 import {
   Dialog,
@@ -245,7 +246,7 @@ export default function SuppliersPage() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-muted-foreground uppercase">{t("Contact Number", "ဆက်သွယ်ရန် ဖုန်းနံပါတ်")}</label>
-              <Input value={supContact} onChange={(e) => setSupContact(e.target.value)} />
+              <PhoneInput value={supContact} onChange={(e) => setSupContact(e.target.value)} placeholder="09xxxxxxxxx" />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-muted-foreground uppercase">{t("Email", "အီးမေးလ်")}</label>

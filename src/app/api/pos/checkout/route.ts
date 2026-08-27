@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { PaymentMethod, StockChangeReason, TransactionStatus } from "@prisma/client";
 import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper";
+import { isValidMyanmarPhone, normalizePhone } from "@/lib/phone";
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +22,8 @@ export async function POST(request: Request) {
       note,
       receiptEmail,
       customerId,
+      wholesaleSale,
+      wholesalePaid,
       isDelivery,
       deliveryCustomerName,
       deliveryPhone,
@@ -82,6 +85,15 @@ export async function POST(request: Request) {
     if (isDelivery && (!deliveryCustomerName || !deliveryPhone || !deliveryAddress)) {
       return NextResponse.json({ error: "Delivery customer name, phone, and address are required" }, { status: 400 });
     }
+    if (isDelivery && !isValidMyanmarPhone(normalizePhone(deliveryPhone))) {
+      return NextResponse.json({ error: "Delivery phone must be exactly 11 digits and start with 09." }, { status: 400 });
+    }
+    const isWholesaleSale = wholesaleSale === true;
+    const wholesalePayment = Number(wholesalePaid ?? 0);
+    if (isWholesaleSale && !customerId) return NextResponse.json({ error: "A named customer is required for a wholesale / credit sale." }, { status: 400 });
+    if (isWholesaleSale && (!Number.isFinite(wholesalePayment) || wholesalePayment < 0 || wholesalePayment > total)) return NextResponse.json({ error: "Wholesale payment must be between zero and the sale total." }, { status: 400 });
+    if (isWholesaleSale && wholesalePayment === 0 && paymentMethod !== "DEBT") return NextResponse.json({ error: "No-pay wholesale sales must use the Credit payment method." }, { status: 400 });
+    if (isWholesaleSale && wholesalePayment > 0 && paymentMethod === "DEBT") return NextResponse.json({ error: "Partial wholesale payments must use Cash, Card, or QR." }, { status: 400 });
 
     // 1. Discount Validation (R1)
     if (typeof discountAmount !== "number" || discountAmount < 0 || discountAmount > subtotal) {
@@ -180,6 +192,7 @@ export async function POST(request: Request) {
         data: {
           branchId,
           staffId,
+          customerId: customerId || null,
           subtotal,
           discountAmount,
           total,
@@ -249,30 +262,33 @@ export async function POST(request: Request) {
             variantId,
             change: 0 - quantity,
             reason: StockChangeReason.SALE,
+            performedByStaffId: staff.id,
+            transactionId: newTransaction.id,
             note: `POS checkout: Order #${newTransaction.id}`,
           },
         });
       }
 
-      if (isDelivery) {
-        await tx.salesOrder.create({
+      if (isWholesaleSale || isDelivery) {
+        const wholesaleOrder = await tx.salesOrder.create({
           data: {
             branchId,
             customerId: customerId || null,
-            status: "DELIVERING",
-            paymentStatus: "PAID",
-            depositStatus: "PAID",
+            status: isDelivery ? "DELIVERING" : "COMPLETED",
+            paymentStatus: isWholesaleSale ? (wholesalePayment >= total ? "PAID" : "PARTIAL") : "PAID",
+            depositStatus: isWholesaleSale ? (wholesalePayment <= 0 ? "NO_PAY" : wholesalePayment >= total ? "PAID" : "PARTIAL") : "PAID",
             subtotal,
             discount: discountAmount,
             total,
-            amountPaid: total,
-            paymentMethod: paymentMethod as PaymentMethod,
+            amountPaid: isWholesaleSale ? wholesalePayment : total,
+            paymentMethod: (isWholesaleSale ? paymentMethod : paymentMethod) as PaymentMethod,
             note: `POS transaction #${newTransaction.id}${note ? ` — ${note}` : ""}`,
-            isDelivery: true,
-            deliveryStatus: "PENDING",
-            deliveryCustomerName,
-            deliveryPhone,
-            deliveryAddress,
+            isDelivery,
+            deliveryStatus: isDelivery ? "PENDING" : "DELIVERED",
+            deliveryCustomerName: isDelivery ? deliveryCustomerName : null,
+            deliveryPhone: isDelivery ? normalizePhone(deliveryPhone) : null,
+            deliveryAddress: isDelivery ? deliveryAddress : null,
+            createdByStaffId: staff.id,
             items: {
               create: normalizedItems.map((item) => ({
                 variantId: item.variantId as string,
@@ -285,8 +301,12 @@ export async function POST(request: Request) {
                 total: (item.unitPrice * item.quantity) - (item.discount || 0),
               })),
             },
+            payments: isWholesaleSale && wholesalePayment > 0 ? { create: { amount: wholesalePayment, method: paymentMethod as PaymentMethod, collectedByStaffId: staff.id, note: "Wholesale sale payment at POS" } } : undefined,
           },
         });
+        if (wholesaleOrder) {
+          await tx.inventoryLog.updateMany({ where: { transactionId: newTransaction.id }, data: { salesOrderId: wholesaleOrder.id } });
+        }
       }
 
       // 3. Log Audit Activity. Sales Orders are fulfilled separately through

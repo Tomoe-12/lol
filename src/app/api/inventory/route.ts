@@ -17,7 +17,32 @@ async function fetchBranchInventory(branchId: string) {
     }),
     prisma.inventoryLog.findMany({
       where: { branchId },
-      include: { variant: { include: { product: { select: { name: true } } } } },
+      include: {
+        branch: { select: { id: true, name: true } },
+        variant: { include: { product: { select: { name: true } } } },
+        performedBy: { select: { id: true, name: true, role: true } },
+        transaction: {
+          select: {
+            id: true,
+            staff: { select: { id: true, name: true } },
+            customer: { select: { id: true, name: true, phone: true, phones: true } },
+          },
+        },
+        salesOrder: {
+          select: {
+            id: true,
+            customer: { select: { id: true, name: true, phone: true, phones: true } },
+            createdByStaff: { select: { id: true, name: true } },
+          },
+        },
+        purchaseOrder: {
+          select: {
+            id: true,
+            supplier: { select: { id: true, name: true, contact: true, email: true } },
+            receivedBy: { select: { id: true, name: true } },
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
       take: 50,
     }),

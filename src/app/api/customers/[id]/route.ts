@@ -2,13 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { checkStaffPermission, getAuthStaff } from "@/lib/auth-helper";
-
-function normalizePhone(value: unknown): string {
-  let digits = String(value || "").replace(/\D/g, "");
-  if (digits.startsWith("0095")) digits = `0${digits.slice(4)}`;
-  if (digits.startsWith("95")) digits = `0${digits.slice(2)}`;
-  return digits;
-}
+import { isValidMyanmarPhone, normalizePhone } from "@/lib/phone";
 
 function collectPhones(customer: { phone: string | null; phones: unknown }): string[] {
   const values = [customer.phone || "", ...(Array.isArray(customer.phones) ? customer.phones : [])];
@@ -38,6 +32,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const normalizedPhones: string[] = Array.from(new Set((Array.isArray(body.phones) ? body.phones : [body.phone]).map(normalizePhone).filter(Boolean)));
     if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
     if (!normalizedPhones.length) return NextResponse.json({ error: "At least one phone number is required." }, { status: 400 });
+    if (normalizedPhones.some((phone) => !isValidMyanmarPhone(phone))) return NextResponse.json({ error: "Each phone number must be exactly 11 digits and start with 09." }, { status: 400 });
 
     const existing = await prisma.customer.findMany({ where: { NOT: { id } }, select: { name: true, phone: true, phones: true } });
     if (existing.some((customer) => collectPhones(customer).some((phone) => normalizedPhones.includes(phone)))) {

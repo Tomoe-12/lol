@@ -34,8 +34,6 @@ export interface NavItem {
   icon: ElementType
   roles: string[]
   moduleKey?: ModuleKey
-  badgeEn?: string
-  badgeMy?: string
 }
 
 const navItems: NavItem[] = [
@@ -54,8 +52,6 @@ const navItems: NavItem[] = [
     icon: ShoppingCart,
     roles: ["OWNER", "MANAGER", "CASHIER"],
     moduleKey: "pos",
-    badgeEn: "Active",
-    badgeMy: "လက်ရှိ",
   },
   {
     titleEn: "Stock Status",
@@ -188,35 +184,55 @@ export function Sidebar() {
 
   // Get role from Clerk public metadata (fresh after reload)
   const role = (user?.publicMetadata?.role as string) ?? "CASHIER"
-  const [pendingPurchaseCount, setPendingPurchaseCount] = useState<number | null>(null)
+  const [counts, setCounts] = useState<Record<string, number> | null>(null)
 
   useEffect(() => {
     let active = true
     if (!user?.id) {
-      setPendingPurchaseCount(null)
+      setCounts(null)
       return () => { active = false }
     }
-    const refreshPendingPurchaseCount = () => {
-      fetch("/api/purchase-orders")
-        .then((response) => response.ok ? response.json() : Promise.reject(new Error("Unable to load purchase orders")))
-        .then((data) => {
-          if (!active) return
-          const count = (data.orders || []).filter((order: { status?: string }) => order.status === "ORDERED" || order.status === "DRAFT").length
-          setPendingPurchaseCount(count)
+    const refreshCounts = async () => {
+      try {
+        const responses = await Promise.all([
+          fetch("/api/inventory?withStock=true"),
+          fetch("/api/sales-orders"),
+          fetch("/api/outstanding"),
+          fetch("/api/delivery?status=PENDING"),
+          fetch("/api/purchase-orders"),
+        ])
+        const data = await Promise.all(responses.map((response) => response.ok ? response.json() : null))
+        if (!active) return
+        const inventory = data[0]?.stockLevels || []
+        const salesOrders = data[1]?.salesOrders || []
+        const outstanding = data[2]
+        const delivery = data[3]
+        const purchaseOrders = data[4]?.orders || []
+        setCounts({
+          "/pos": salesOrders.filter((order: { status?: string; items?: { quantity?: number; fulfilledQuantity?: number }[] }) => order.status === "CONFIRMED" && (order.items || []).some((item) => (item.quantity || 0) > (item.fulfilledQuantity || 0))).length,
+          "/inventory": inventory.filter((stock: { quantity?: number; lowStockThreshold?: number }) => (stock.quantity || 0) <= (stock.lowStockThreshold || 0)).length,
+          "/sales-orders": salesOrders.filter((order: { status?: string }) => order.status === "DRAFT" || order.status === "CONFIRMED").length,
+          "/outstanding": Number(outstanding?.totalDebtors || (outstanding?.debts || []).length || 0),
+          "/delivery": Number(delivery?.stats?.pendingCount || (delivery?.orders || []).length || 0),
+          "/purchase-orders": purchaseOrders.filter((order: { status?: string }) => order.status === "ORDERED" || order.status === "DRAFT").length,
         })
-        .catch(() => {
-          if (active) setPendingPurchaseCount(null)
-        })
+      } catch {
+        if (active) setCounts(null)
+      }
     }
-    const handlePurchaseOrdersUpdated = () => refreshPendingPurchaseCount()
-    refreshPendingPurchaseCount()
-    window.addEventListener("purchase-orders-updated", handlePurchaseOrdersUpdated)
-    window.addEventListener("focus", handlePurchaseOrdersUpdated)
-    const refreshTimer = window.setInterval(refreshPendingPurchaseCount, 15000)
+    const handleCountsUpdated = () => { void refreshCounts() }
+    void refreshCounts()
+    window.addEventListener("purchase-orders-updated", handleCountsUpdated)
+    window.addEventListener("focus", handleCountsUpdated)
+    window.addEventListener("sales-orders-updated", handleCountsUpdated)
+    window.addEventListener("delivery-updated", handleCountsUpdated)
+    const refreshTimer = window.setInterval(() => { void refreshCounts() }, 15000)
     return () => {
       active = false
-      window.removeEventListener("purchase-orders-updated", handlePurchaseOrdersUpdated)
-      window.removeEventListener("focus", handlePurchaseOrdersUpdated)
+      window.removeEventListener("purchase-orders-updated", handleCountsUpdated)
+      window.removeEventListener("focus", handleCountsUpdated)
+      window.removeEventListener("sales-orders-updated", handleCountsUpdated)
+      window.removeEventListener("delivery-updated", handleCountsUpdated)
       window.clearInterval(refreshTimer)
     }
   }, [user?.id])
@@ -258,6 +274,7 @@ export function Sidebar() {
           {filteredNav.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
             const title = t(item.titleEn, item.titleMy)
+            const count = counts?.[item.href] ?? 0
             return (
               <li key={item.href}>
                 <Link
@@ -275,14 +292,9 @@ export function Sidebar() {
                   {!collapsed && (
                     <>
                       <span className="flex-1">{title}</span>
-                      {item.href === "/purchase-orders" && pendingPurchaseCount !== null && (
+                      {count > 0 && (
                         <Badge variant="destructive" className="text-[10px] py-0 px-1.5 h-4 min-w-4 justify-center">
-                          {pendingPurchaseCount}
-                        </Badge>
-                      )}
-                      {item.badgeEn && item.badgeMy && (
-                        <Badge variant="success" className="text-[10px] py-0 px-1.5 h-4">
-                          {t(item.badgeEn, item.badgeMy)}
+                          {count}
                         </Badge>
                       )}
                     </>

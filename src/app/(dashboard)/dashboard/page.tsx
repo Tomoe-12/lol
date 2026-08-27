@@ -21,6 +21,7 @@ import { useLanguage } from "@/providers/language-provider"
 
 interface Stats {
   revenueMMK: number;
+  salesOrderDepositsMMK: number;
   transactionCount: number;
   lowStockCount: number;
   pendingReceivables: number;
@@ -81,6 +82,7 @@ export default function DashboardPage() {
   // API Data
   const [stats, setStats] = React.useState<Stats>({
     revenueMMK: 0,
+    salesOrderDepositsMMK: 0,
     transactionCount: 0,
     lowStockCount: 0,
     pendingReceivables: 0,
@@ -228,7 +230,7 @@ export default function DashboardPage() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardDescription className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {t("Revenue Today", "ယနေ့အရောင်း")}
+                {t("Cash Received Today", "ယနေ့ လက်ခံရရှိငွေ")}
               </CardDescription>
               <div className="rounded-xl p-2 bg-emerald-500/10">
                 <DollarSign className="h-4 w-4 text-emerald-500" />
@@ -241,6 +243,7 @@ export default function DashboardPage() {
             ) : (
               <>
                 <div className="text-2xl font-black text-foreground">{stats.revenueMMK.toLocaleString()} Ks</div>
+                <p className="text-xs text-muted-foreground mt-1">Today only ({new Date().toLocaleDateString()}) · Includes {stats.salesOrderDepositsMMK.toLocaleString()} Ks in sales-order deposits</p>
               </>
             )}
           </CardContent>
@@ -367,7 +370,7 @@ export default function DashboardPage() {
                   <thead>
                     <tr className="border-b border-border bg-muted/20 text-muted-foreground font-bold text-[10px] uppercase">
                       <th className="p-4">{t("Branch", "ဆိုင်ခွဲ")}</th>
-                      <th className="p-4">{t("Revenue Today", "အရောင်း")}</th>
+                      <th className="p-4">{t("Cash Received Today", "ယနေ့ လက်ခံရရှိငွေ")}</th>
                       <th className="p-4 text-center">Tx Count</th>
                       <th className="p-4 text-center">Status</th>
                     </tr>
@@ -441,7 +444,7 @@ export default function DashboardPage() {
               <Card className="border-border">
                 <CardHeader>
                   <CardTitle className="text-sm font-bold text-foreground">Cashier Leaderboard</CardTitle>
-                  <CardDescription className="text-xs">Attributed transactions and revenue</CardDescription>
+                  <CardDescription className="text-xs">Today only · POS sales plus sales-order payments collected by each staff member</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">

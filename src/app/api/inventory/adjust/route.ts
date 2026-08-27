@@ -59,6 +59,7 @@ export async function POST(request: Request) {
           variantId,
           change: changeAmount,
           reason: enumReason,
+          performedByStaffId: staff.id,
           note: note || `Manual adjustment of ${changeAmount}`,
         },
       });

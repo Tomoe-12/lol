@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper";
+import { isValidMyanmarPhone, normalizePhone } from "@/lib/phone";
 import { DeliveryFeePayer, ExpenseCategory, PaymentMethod, SalesOrderStatus, StockChangeReason, TransactionStatus } from "@prisma/client";
 
 type FulfillmentItem = { variantId: string; quantity: number; unitPrice: number; discount?: number };
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
     const paymentMethod = (body.paymentMethod || order.paymentMethod || "CASH") as PaymentMethod;
     if (amountCollected > 0 && !validPaymentMethods.has(paymentMethod)) return NextResponse.json({ error: "Payment method must be Cash, Card, or QR." }, { status: 400 });
     if (fulfillmentMode === "STORE" && amountCollected !== Math.max(0, total - order.amountPaid)) return NextResponse.json({ error: "Collect the exact remaining balance before completing the in-store fulfillment." }, { status: 400 });
+    if (fulfillmentMode === "DELIVERY" && !isValidMyanmarPhone(normalizePhone(body.deliveryPhone || order.customer?.phone || ""))) return NextResponse.json({ error: "Delivery phone must be exactly 11 digits and start with 09." }, { status: 400 });
 
     const transaction = await prisma.$transaction(async (tx) => {
       for (const item of normalized) {
@@ -84,6 +86,7 @@ export async function POST(request: Request) {
         data: {
           branchId: order.branchId,
           staffId: staff.id,
+          salesOrderId: order.id,
           subtotal,
           discountAmount: itemDiscount + orderDiscount,
           total,
@@ -105,14 +108,14 @@ export async function POST(request: Request) {
       });
       for (const item of normalized) {
         await tx.stockLevel.update({ where: { branchId_variantId: { branchId: order.branchId, variantId: item.variantId } }, data: { quantity: { decrement: item.quantity } } });
-        await tx.inventoryLog.create({ data: { branchId: order.branchId, variantId: item.variantId, change: -item.quantity, reason: StockChangeReason.SALE, note: `Sales Voucher fulfillment for Order #${order.id.slice(-6).toUpperCase()}` } });
+        await tx.inventoryLog.create({ data: { branchId: order.branchId, variantId: item.variantId, change: -item.quantity, reason: StockChangeReason.SALE, note: `Sales Voucher fulfillment for Order #${order.id.slice(-6).toUpperCase()}`, performedByStaffId: staff.id, transactionId: created.id, salesOrderId: order.id } });
         await tx.salesOrderItem.update({ where: { id: item.orderItem.id }, data: { fulfilledQuantity: { increment: item.quantity }, unitPrice: item.unitPrice, unitCost: item.variant.costPrice, discount: item.discount, total: item.lineTotal } });
       }
-      if (amountCollected > 0) await tx.orderPayment.create({ data: { salesOrderId: order.id, amount: amountCollected, method: paymentMethod, note: "Payment collected at Sales Voucher" } });
+      if (amountCollected > 0) await tx.orderPayment.create({ data: { salesOrderId: order.id, amount: amountCollected, method: paymentMethod, collectedByStaffId: staff.id, note: "Payment collected at Sales Voucher" } });
       const refreshedItems = await tx.salesOrderItem.findMany({ where: { salesOrderId: order.id } });
       const fullyFulfilled = refreshedItems.every((item) => item.fulfilledQuantity >= item.quantity);
       const finalStatus: SalesOrderStatus = fulfillmentMode === "DELIVERY" ? "DELIVERING" : (fullyFulfilled ? "COMPLETED" : "CONFIRMED");
-      const updatedOrder = await tx.salesOrder.update({ where: { id: order.id }, data: { status: finalStatus, subtotal, discount: itemDiscount + orderDiscount, total, amountPaid: totalPaidAfter, paymentStatus: totalPaidAfter >= total ? "PAID" : "PARTIAL", ...(fulfillmentMode === "DELIVERY" ? { isDelivery: true, deliveryStatus: "PENDING", deliveryFee, deliveryFeePayer: body.deliveryFeePayer || null, deliveryCustomerName: order.customer?.name || null, deliveryPhone: body.deliveryPhone || order.customer?.phone || null, deliveryAddress: body.deliveryAddress || order.customer?.address || null } : {}) } });
+      const updatedOrder = await tx.salesOrder.update({ where: { id: order.id }, data: { status: finalStatus, subtotal, discount: itemDiscount + orderDiscount, total, amountPaid: totalPaidAfter, paymentStatus: totalPaidAfter >= total ? "PAID" : "PARTIAL", ...(fulfillmentMode === "DELIVERY" ? { isDelivery: true, deliveryStatus: "PENDING", deliveryFee, deliveryFeePayer: body.deliveryFeePayer || null, deliveryCustomerName: order.customer?.name || null, deliveryPhone: normalizePhone(body.deliveryPhone || order.customer?.phone || ""), deliveryAddress: body.deliveryAddress || order.customer?.address || null } : {}) } });
       if (fulfillmentMode === "DELIVERY" && deliveryFee > 0 && body.deliveryFeePayer === DeliveryFeePayer.STORE) {
         await tx.expense.create({
           data: {

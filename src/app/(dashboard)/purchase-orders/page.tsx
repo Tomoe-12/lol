@@ -558,6 +558,7 @@ export default function PurchasesPage() {
           <h1 className="text-2xl font-black tracking-tight flex items-start gap-2 break-words">
             <PackageCheck className="h-6 w-6 text-primary" />
             {t("Purchase Orders", "ဝယ်ယူမှု အမှာစာများ")}
+            {pendingOrders.length > 0 && <Badge variant="destructive" className="text-xs">{pendingOrders.length}</Badge>}
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground mt-1 font-semibold break-words">
             {t("Create purchase orders, receive goods, and automatically update your POS selling prices.", "ဝယ်ယူမှု အမှာစာများ ပြုလုပ်ပါ၊ ပစ္စည်းများ လက်ခံပါ၊ အရောင်းဈေးနှုန်းများကို အလိုအလျောက် ပြင်ဆင်ပါ။")}

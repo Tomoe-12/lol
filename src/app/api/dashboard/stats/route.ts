@@ -68,6 +68,7 @@ export async function GET(request: Request) {
             where: {
               createdAt: { gte: sevenDaysAgo },
               status: "COMPLETED",
+              salesOrderId: null,
               ...(effectiveBranchId ? { branchId: effectiveBranchId } : {}),
             },
             select: { branchId: true, total: true, createdAt: true },
@@ -109,6 +110,8 @@ export async function GET(request: Request) {
             by: ["staffId"],
             where: {
               status: "COMPLETED",
+              salesOrderId: null,
+              createdAt: { gte: todayStart, lte: todayEnd },
               ...(effectiveBranchId ? { branchId: effectiveBranchId } : {}),
             },
             _sum: { total: true },
@@ -128,14 +131,14 @@ export async function GET(request: Request) {
               createdAt: { gte: todayStart, lte: todayEnd },
               ...(effectiveBranchId ? { salesOrder: { branchId: effectiveBranchId } } : {}),
             },
-            select: { amount: true, salesOrder: { select: { branchId: true } } }
+            select: { amount: true, createdAt: true, collectedByStaffId: true, salesOrder: { select: { branchId: true } } }
           }),
           prisma.orderPayment.findMany({
             where: {
               createdAt: { gte: sevenDaysAgo },
               ...(effectiveBranchId ? { salesOrder: { branchId: effectiveBranchId } } : {}),
             },
-            select: { amount: true, createdAt: true, salesOrder: { select: { branchId: true } } }
+            select: { amount: true, createdAt: true, collectedByStaffId: true, salesOrder: { select: { branchId: true } } }
           }),
           prisma.salesOrder.aggregate({
             where: {
@@ -147,18 +150,22 @@ export async function GET(request: Request) {
           })
         ]));
 
-    const totalPosRevenueMMK = todayTransactions.reduce((sum, tx) => sum + tx.total, 0);
+    const cashTransactions = todayTransactions.filter((tx) => !tx.salesOrderId);
+    const totalPosRevenueMMK = cashTransactions.reduce((sum, tx) => sum + tx.total, 0);
     const totalOrderPaymentMMK = todayOrderPayments.reduce((sum, p) => sum + p.amount, 0);
     const totalRevenueMMK = totalPosRevenueMMK + totalOrderPaymentMMK;
-    const transactionCount = todayTransactions.length + (todayOrderPayments.length > 0 ? 1 : 0); // Approx
+    const transactionCount = cashTransactions.length + todayOrderPayments.length;
     const lowStockCount = Number(lowStockCountResult[0]?.count ?? 0);
     const pendingReceivables = (pendingReceivablesAgg._sum.total ?? 0) - (pendingReceivablesAgg._sum.amountPaid ?? 0);
 
-    const uniqueStaffToday = new Set(todayTransactions.map((tx) => tx.staffId));
+    const uniqueStaffToday = new Set([
+      ...cashTransactions.map((tx) => tx.staffId),
+      ...todayOrderPayments.map((payment) => payment.collectedByStaffId).filter(Boolean),
+    ]);
     const activeStaffCount = uniqueStaffToday.size || totalStaffCount;
 
     const branchTxnMap = new Map<string, { revenue: number; txn: number }>();
-    for (const tx of todayTransactions) {
+    for (const tx of cashTransactions) {
       const current = branchTxnMap.get(tx.branchId) ?? { revenue: 0, txn: 0 };
       current.revenue += tx.total;
       current.txn += 1;
@@ -168,6 +175,7 @@ export async function GET(request: Request) {
       const bId = p.salesOrder.branchId;
       const current = branchTxnMap.get(bId) ?? { revenue: 0, txn: 0 };
       current.revenue += p.amount;
+      current.txn += 1;
       branchTxnMap.set(bId, current);
     }
 
@@ -229,9 +237,14 @@ export async function GET(request: Request) {
       txCount: 0,
     }));
 
-    for (const tx of todayTransactions) {
+    for (const tx of cashTransactions) {
       const hour = new Date(tx.createdAt).getHours();
       hourlyDistributionMap[hour].amount += tx.total;
+      hourlyDistributionMap[hour].txCount += 1;
+    }
+    for (const p of todayOrderPayments) {
+      const hour = new Date(p.createdAt).getHours();
+      hourlyDistributionMap[hour].amount += p.amount;
       hourlyDistributionMap[hour].txCount += 1;
     }
 
@@ -273,6 +286,14 @@ export async function GET(request: Request) {
       ])
     );
 
+    for (const payment of todayOrderPayments) {
+      if (!payment.collectedByStaffId) continue;
+      const current = staffStatsById.get(payment.collectedByStaffId) ?? { txn: 0, revenue: 0 };
+      current.txn += 1;
+      current.revenue += payment.amount;
+      staffStatsById.set(payment.collectedByStaffId, current);
+    }
+
     const staffRankings = allStaff
       .map((staff) => {
         const stats = staffStatsById.get(staff.id);
@@ -285,7 +306,7 @@ export async function GET(request: Request) {
       })
       .sort((a, b) => b.revenue - a.revenue);
 
-    const liveFeed = todayTransactions.slice(0, 10).map((tx) => ({
+    const liveFeed = cashTransactions.slice(0, 10).map((tx) => ({
       id: tx.id,
       branchName: tx.branch.name,
       staffName: tx.staff.name,
@@ -299,6 +320,7 @@ export async function GET(request: Request) {
           success: true,
           stats: {
             revenueMMK: totalRevenueMMK,
+            salesOrderDepositsMMK: totalOrderPaymentMMK,
             transactionCount,
             lowStockCount,
             pendingReceivables,

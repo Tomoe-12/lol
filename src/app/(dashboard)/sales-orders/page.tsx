@@ -1,136 +1,1669 @@
-"use client"
+"use client";
 
-import React from "react"
-import { useUser } from "@/providers/auth-provider"
-import { useLanguage } from "@/providers/language-provider"
-import { CalendarDays, ClipboardList, CreditCard, Eye, Loader2, Mail, MapPin, Package, Phone, Plus, UserPlus, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Card } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { SearchableSelect } from "@/components/ui/searchable-select"
+import React from "react";
+import { useUser } from "@/providers/auth-provider";
+import { useLanguage } from "@/providers/language-provider";
+import {
+  CalendarDays,
+  ClipboardList,
+  CreditCard,
+  Eye,
+  Loader2,
+  Mail,
+  MapPin,
+  Package,
+  Phone,
+  Plus,
+  UserPlus,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
-type Customer = { id: string; name: string; phone?: string | null; phones?: string[]; email?: string | null; address?: string | null }
-type Variant = { id: string; name: string; barcode?: string; price?: number; costPrice?: number; stockLevels?: { branchId: string; quantity: number }[]; product: { name: string; price?: number; costPrice?: number } }
-type OrderItem = { id: string; variantId: string; requestedQuantity?: number; quantity: number; fulfilledQuantity: number; unitPrice?: number | null; variant: Variant }
-type Order = { id: string; branchId: string; status: string; paymentStatus?: string; depositStatus: string; amountPaid: number; subtotal?: number; discount?: number; total?: number; note?: string | null; createdAt: string; updatedAt?: string; deliveryDate?: string | null; customer?: Customer | null; branch?: { name: string }; items: OrderItem[]; payments?: { amount: number; method: string; note?: string | null; createdAt: string }[] }
+type Customer = {
+  id: string;
+  name: string;
+  phone?: string | null;
+  phones?: string[];
+  email?: string | null;
+  address?: string | null;
+};
+type Variant = {
+  id: string;
+  name: string;
+  barcode?: string;
+  price?: number;
+  costPrice?: number;
+  stockLevels?: { branchId: string; quantity: number }[];
+  product: { name: string; price?: number; costPrice?: number };
+};
+type OrderItem = {
+  id: string;
+  variantId: string;
+  requestedQuantity?: number;
+  quantity: number;
+  fulfilledQuantity: number;
+  unitPrice?: number | null;
+  variant: Variant;
+};
+type Order = {
+  id: string;
+  branchId: string;
+  status: string;
+  paymentStatus?: string;
+  depositStatus: string;
+  amountPaid: number;
+  subtotal?: number;
+  discount?: number;
+  total?: number;
+  note?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+  deliveryDate?: string | null;
+  customer?: Customer | null;
+  branch?: { name: string };
+  items: OrderItem[];
+  payments?: {
+    amount: number;
+    method: string;
+    note?: string | null;
+    createdAt: string;
+  }[];
+};
 
 function normalizePhone(value: string): string {
-  let digits = value.replace(/\D/g, "")
-  if (digits.startsWith("0095")) digits = `0${digits.slice(4)}`
-  if (digits.startsWith("95")) digits = `0${digits.slice(2)}`
-  return digits
+  let digits = value.replace(/\D/g, "");
+  if (digits.startsWith("0095")) digits = `0${digits.slice(4)}`;
+  if (digits.startsWith("95")) digits = `0${digits.slice(2)}`;
+  return digits;
 }
 
-function localizeSalesOrderError(message: string, translate: (english: string, burmese: string) => string): string {
+function localizeSalesOrderError(
+  message: string,
+  translate: (english: string, burmese: string) => string,
+): string {
   const rules: [string, string, string][] = [
-    ["Customer name is required", "Customer name is required", "ဝယ်သူအမည် ထည့်ရန်လိုအပ်ပါသည်။"],
-    ["At least one phone number is required", "At least one phone number is required", "ဖုန်းနံပါတ် အနည်းဆုံးတစ်ခု ထည့်ရန်လိုအပ်ပါသည်။"],
-    ["Each phone number must be unique", "Each phone number must be unique", "ဖုန်းနံပါတ်တစ်ခုစီသည် မတူညီရပါ။"],
-    ["A customer already exists with this phone number", "A customer already exists with this phone number", "ဤဖုန်းနံပါတ်ဖြင့် ဝယ်သူရှိပြီးသားဖြစ်ပါသည်။"],
-    ["Select or create a customer", "Select or create a customer", "ဝယ်သူကို ရွေးချယ်ပါ သို့မဟုတ် အသစ်ဖန်တီးပါ။"],
-    ["Add at least one requested item", "Add at least one requested item", "မှာယူမည့်ပစ္စည်း အနည်းဆုံးတစ်ခု ထည့်ပါ။"],
-    ["INSUFFICIENT_STOCK", "There is not enough stock for this item.", "ဤပစ္စည်းအတွက် လက်ကျန်စတော့ မလုံလောက်ပါ။"],
-    ["has only", "There is not enough stock for this item.", "ဤပစ္စည်းအတွက် လက်ကျန်စတော့ မလုံလောက်ပါ။"],
-    ["cannot be below cost price", "The agreed price cannot be below cost price.", "သတ်မှတ်ရောင်းဈေးသည် ကုန်ကျဈေးထက် မနိမ့်ရပါ။"],
-    ["cannot exceed catalog price", "The agreed price cannot exceed catalog price.", "သတ်မှတ်ရောင်းဈေးသည် ကတ်တလောက်ဈေးထက် မကျော်ရပါ။"],
-    ["valid optional payment", "Enter a valid optional payment.", "ရွေးချယ်နိုင်သော ပေးချေငွေကို မှန်ကန်စွာ ထည့်ပါ။"],
-    ["Payment method must be Cash, Card, or QR", "Payment method must be Cash, Card, or QR.", "ငွေပေးချေမှုနည်းလမ်းသည် ငွေသား၊ ကတ် သို့မဟုတ် QR ဖြစ်ရပါမည်။"],
+    [
+      "Customer name is required",
+      "Customer name is required",
+      "ဝယ်သူအမည် ထည့်ရန်လိုအပ်ပါသည်။",
+    ],
+    [
+      "At least one phone number is required",
+      "At least one phone number is required",
+      "ဖုန်းနံပါတ် အနည်းဆုံးတစ်ခု ထည့်ရန်လိုအပ်ပါသည်။",
+    ],
+    [
+      "Each phone number must be unique",
+      "Each phone number must be unique",
+      "ဖုန်းနံပါတ်တစ်ခုစီသည် မတူညီရပါ။",
+    ],
+    [
+      "A customer already exists with this phone number",
+      "A customer already exists with this phone number",
+      "ဤဖုန်းနံပါတ်ဖြင့် ဝယ်သူရှိပြီးသားဖြစ်ပါသည်။",
+    ],
+    [
+      "Select or create a customer",
+      "Select or create a customer",
+      "ဝယ်သူကို ရွေးချယ်ပါ သို့မဟုတ် အသစ်ဖန်တီးပါ။",
+    ],
+    [
+      "Add at least one requested item",
+      "Add at least one requested item",
+      "မှာယူမည့်ပစ္စည်း အနည်းဆုံးတစ်ခု ထည့်ပါ။",
+    ],
+    [
+      "INSUFFICIENT_STOCK",
+      "There is not enough stock for this item.",
+      "ဤပစ္စည်းအတွက် လက်ကျန်စတော့ မလုံလောက်ပါ။",
+    ],
+    [
+      "has only",
+      "There is not enough stock for this item.",
+      "ဤပစ္စည်းအတွက် လက်ကျန်စတော့ မလုံလောက်ပါ။",
+    ],
+    [
+      "cannot be below cost price",
+      "The agreed price cannot be below cost price.",
+      "သတ်မှတ်ရောင်းဈေးသည် ကုန်ကျဈေးထက် မနိမ့်ရပါ။",
+    ],
+    [
+      "cannot exceed catalog price",
+      "The agreed price cannot exceed catalog price.",
+      "သတ်မှတ်ရောင်းဈေးသည် ကတ်တလောက်ဈေးထက် မကျော်ရပါ။",
+    ],
+    [
+      "valid optional payment",
+      "Enter a valid optional payment.",
+      "ရွေးချယ်နိုင်သော ပေးချေငွေကို မှန်ကန်စွာ ထည့်ပါ။",
+    ],
+    [
+      "Payment method must be Cash, Card, or QR",
+      "Payment method must be Cash, Card, or QR.",
+      "ငွေပေးချေမှုနည်းလမ်းသည် ငွေသား၊ ကတ် သို့မဟုတ် QR ဖြစ်ရပါမည်။",
+    ],
   ];
   const rule = rules.find(([needle]) => message.includes(needle));
   return rule ? translate(rule[1], rule[2]) : message;
 }
 
 export default function SalesOrdersPage() {
-  const { user } = useUser(); const { t } = useLanguage(); const role = (user?.role || user?.publicMetadata?.role || "CASHIER") as string
-  const [orders, setOrders] = React.useState<Order[]>([]); const [customers, setCustomers] = React.useState<Customer[]>([]); const [variants, setVariants] = React.useState<Variant[]>([]); const [branches, setBranches] = React.useState<{ id: string; name: string }[]>([])
-  const [loading, setLoading] = React.useState(true); const [query, setQuery] = React.useState(""); const [status, setStatus] = React.useState("ALL"); const [branchId, setBranchId] = React.useState("")
-  const [createOpen, setCreateOpen] = React.useState(false); const [view, setView] = React.useState<Order | null>(null); const [customerId, setCustomerId] = React.useState(""); const [newCustomerOpen, setNewCustomerOpen] = React.useState(false); const [newCustomer, setNewCustomer] = React.useState({ name: "", phones: [""], email: "", address: "" }); const [newCustomerError, setNewCustomerError] = React.useState("")
-  const [selectedBranch, setSelectedBranch] = React.useState(""); const [confirmPrices, setConfirmPrices] = React.useState<Record<string, string>>({}); const [confirmQuantities, setConfirmQuantities] = React.useState<Record<string, string>>({}); const [items, setItems] = React.useState<{ variantId: string; quantity: number }[]>([{ variantId: "", quantity: 1 }]); const [deposit, setDeposit] = React.useState(""); const [additionalPayment, setAdditionalPayment] = React.useState(""); const [paymentMethod, setPaymentMethod] = React.useState("CASH"); const [note, setNote] = React.useState(""); const [saving, setSaving] = React.useState(false); const [error, setError] = React.useState(""); const [refund, setRefund] = React.useState(""); const [confirmAction, setConfirmAction] = React.useState<"CONFIRM" | "CANCEL" | null>(null)
+  const { user } = useUser();
+  const { t } = useLanguage();
+  const role = (user?.role ||
+    user?.publicMetadata?.role ||
+    "CASHIER") as string;
+  const [orders, setOrders] = React.useState<Order[]>([]);
+  const [customers, setCustomers] = React.useState<Customer[]>([]);
+  const [variants, setVariants] = React.useState<Variant[]>([]);
+  const [branches, setBranches] = React.useState<
+    { id: string; name: string }[]
+  >([]);
+  const [loading, setLoading] = React.useState(true);
+  const [query, setQuery] = React.useState("");
+  const [status, setStatus] = React.useState("ALL");
+  const [branchId, setBranchId] = React.useState("");
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const [view, setView] = React.useState<Order | null>(null);
+  const [customerId, setCustomerId] = React.useState("");
+  const [newCustomerOpen, setNewCustomerOpen] = React.useState(false);
+  const [newCustomer, setNewCustomer] = React.useState({
+    name: "",
+    phones: [""],
+    email: "",
+    address: "",
+  });
+  const [newCustomerError, setNewCustomerError] = React.useState("");
+  const [selectedBranch, setSelectedBranch] = React.useState("");
+  const [confirmPrices, setConfirmPrices] = React.useState<
+    Record<string, string>
+  >({});
+  const [confirmQuantities, setConfirmQuantities] = React.useState<
+    Record<string, string>
+  >({});
+  const [draftAddVariantId, setDraftAddVariantId] = React.useState("");
+  const [items, setItems] = React.useState<
+    { variantId: string; quantity: number }[]
+  >([{ variantId: "", quantity: 1 }]);
+  const [deposit, setDeposit] = React.useState("");
+  const [additionalPayment, setAdditionalPayment] = React.useState("");
+  const [paymentMethod, setPaymentMethod] = React.useState("CASH");
+  const [note, setNote] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [refund, setRefund] = React.useState("");
+  const [confirmAction, setConfirmAction] = React.useState<
+    "CONFIRM" | "CANCEL" | null
+  >(null);
 
-  const load = React.useCallback(async () => { setLoading(true); try { const [o, c, p, b] = await Promise.all([fetch("/api/sales-orders"), fetch("/api/customers"), fetch("/api/products"), role === "OWNER" ? fetch("/api/branches") : Promise.resolve(null)]); const od = await o.json(); const cd = await c.json(); const pd = await p.json(); setOrders(od.salesOrders || []); setCustomers(cd || []); setVariants((pd.products || []).flatMap((product: { id: string; name: string; price?: number; variants?: { id: string; name: string; price?: number; costPrice?: number; stockLevels?: { branchId: string; quantity: number }[] }[] }) => (product.variants || []).map((variant) => ({ id: variant.id, name: variant.name, price: variant.price, costPrice: variant.costPrice, stockLevels: variant.stockLevels, product: { name: product.name, price: product.price } })))); if (b) { const bd = await b.json(); setBranches(bd.branches || []) } } finally { setLoading(false) } }, [role])
-  React.useEffect(() => { void load() }, [load])
-  React.useEffect(() => { if (error) { const translated = localizeSalesOrderError(error, t); if (translated !== error) setError(translated) } }, [error, t])
-  React.useEffect(() => { if (newCustomerError) { const translated = localizeSalesOrderError(newCustomerError, t); if (translated !== newCustomerError) setNewCustomerError(translated) } }, [newCustomerError, t])
-  React.useEffect(() => { if (view) setConfirmQuantities(Object.fromEntries(view.items.map((item) => [item.id, String(item.quantity)]))) }, [view?.id])
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const [o, c, p, b] = await Promise.all([
+        fetch("/api/sales-orders"),
+        fetch("/api/customers"),
+        fetch("/api/products"),
+        role === "OWNER" ? fetch("/api/branches") : Promise.resolve(null),
+      ]);
+      const od = await o.json();
+      const cd = await c.json();
+      const pd = await p.json();
+      setOrders(od.salesOrders || []);
+      setCustomers(cd || []);
+      setVariants(
+        (pd.products || []).flatMap(
+          (product: {
+            id: string;
+            name: string;
+            price?: number;
+            variants?: {
+              id: string;
+              name: string;
+              price?: number;
+              costPrice?: number;
+              stockLevels?: { branchId: string; quantity: number }[];
+            }[];
+          }) =>
+            (product.variants || []).map((variant) => ({
+              id: variant.id,
+              name: variant.name,
+              price: variant.price,
+              costPrice: variant.costPrice,
+              stockLevels: variant.stockLevels,
+              product: { name: product.name, price: product.price },
+            })),
+        ),
+      );
+      if (b) {
+        const bd = await b.json();
+        setBranches(bd.branches || []);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [role]);
   React.useEffect(() => {
-    if (!view || view.status !== "DRAFT") return
-    setView((current) => current ? {
-      ...current,
-      items: current.items.map((item) => ({ ...item, quantity: Number(confirmQuantities[item.id] || item.quantity) }))
-    } : current)
-  }, [confirmQuantities])
+    void load();
+  }, [load]);
+  React.useEffect(() => {
+    if (error) {
+      const translated = localizeSalesOrderError(error, t);
+      if (translated !== error) setError(translated);
+    }
+  }, [error, t]);
+  React.useEffect(() => {
+    if (newCustomerError) {
+      const translated = localizeSalesOrderError(newCustomerError, t);
+      if (translated !== newCustomerError) setNewCustomerError(translated);
+    }
+  }, [newCustomerError, t]);
+  React.useEffect(() => {
+    if (view)
+      setConfirmQuantities(
+        Object.fromEntries(
+          view.items.map((item) => [item.id, String(item.quantity)]),
+        ),
+      );
+  }, [view?.id]);
+  React.useEffect(() => {
+    if (!view || view.status !== "DRAFT") return;
+    setView((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((item) => ({
+              ...item,
+              quantity: Number(confirmQuantities[item.id] || item.quantity),
+            })),
+          }
+        : current,
+    );
+  }, [confirmQuantities]);
 
-  const resetCreate = () => { setCustomerId(""); setSelectedBranch(user?.branchId || ""); setItems([{ variantId: "", quantity: 1 }]); setDeposit(""); setPaymentMethod("CASH"); setNote(""); setError(""); setNewCustomerOpen(false) }
-  const duplicatePhone = React.useMemo(() => { const entered = newCustomer.phones.map(normalizePhone).filter(Boolean); if (new Set(entered).size !== entered.length) return "Each phone number must be unique."; const existing = customers.find((customer) => (customer.phones || [customer.phone || ""]).map(normalizePhone).some((phone) => entered.includes(phone))); return existing ? `This phone already belongs to ${existing.name}. Select that customer instead.` : "" }, [newCustomer.phones, customers])
-  const createCustomer = async () => { setNewCustomerError(""); if (!newCustomer.name.trim()) { setNewCustomerError("Customer name is required."); return } const phones = newCustomer.phones.map((phone) => phone.trim()).filter(Boolean); if (!phones.length) { setNewCustomerError("At least one phone number is required."); return } if (duplicatePhone) { setNewCustomerError(duplicatePhone); return } const res = await fetch("/api/customers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newCustomer.name, phones, email: newCustomer.email || undefined, address: newCustomer.address || undefined }) }); const data = await res.json(); if (res.status === 409 && data.customer) { setCustomers((current) => current.some((customer) => customer.id === data.customer.id) ? current : [data.customer, ...current]); setCustomerId(data.customer.id); setNewCustomerOpen(false); setNewCustomerError(""); return } if (!res.ok) { setNewCustomerError(data.error || "Could not create customer."); return } setCustomers((current) => [data.customer, ...current]); setCustomerId(data.customer.id); setNewCustomer({ name: "", phones: [""], email: "", address: "" }); setNewCustomerOpen(false) }
-  const duplicateRequestedItem = React.useMemo(() => { const selected = items.map((item) => item.variantId).filter(Boolean); return new Set(selected).size !== selected.length }, [items])
-  React.useEffect(() => { if (!duplicateRequestedItem) return; setItems((current) => { const seen = new Set<string>(); let changed = false; const next = current.map((item) => { if (!item.variantId || !seen.has(item.variantId)) { if (item.variantId) seen.add(item.variantId); return item } changed = true; return { ...item, variantId: "" } }); if (changed) setError("The same product cannot be requested more than once."); return changed ? next : current }) }, [duplicateRequestedItem])
-  const createOrder = async (event: React.FormEvent) => { event.preventDefault(); setError(""); const validItems = items.filter((item) => item.variantId && Number(item.quantity) > 0); if (!customerId) { setError("Select or create a customer."); return } if (!validItems.length) { setError("Add at least one requested item."); return } if (duplicateRequestedItem) { setError("The same product cannot be requested more than once."); return } setSaving(true); try { const res = await fetch("/api/sales-orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ branchId: role === "OWNER" ? selectedBranch : user?.branchId, customerId, items: validItems, amountPaid: Number(deposit || 0), paymentMethod: Number(deposit || 0) > 0 ? paymentMethod : undefined, note }) }); const data = await res.json(); if (!res.ok) throw new Error(data.error); setCreateOpen(false); await load() } catch (e) { setError(e instanceof Error ? e.message : "Could not save Sales Order") } finally { setSaving(false) } }
-  const catalogPrice = (item: OrderItem) => (item.variant.price || 0) > 0 ? (item.variant.price || 0) : (item.variant.product.price || 0)
-  const reviewTotal = view?.items.reduce((sum, item) => sum + Number(confirmQuantities[item.id] || item.quantity) * Number(confirmPrices[item.id] || 0), 0) || 0
-  const reviewBalance = Math.max(0, reviewTotal - (view?.amountPaid || 0))
-  const reviewPaymentStatus = (view?.amountPaid || 0) <= 0 ? "NO PAY" : (reviewTotal > 0 && (view?.amountPaid || 0) >= reviewTotal ? "FULLY PAID" : "PARTIAL PAID")
-  const confirmationReady = Boolean(view && view.items.length > 0 && view.items.every((item) => { const price = Number(confirmPrices[item.id] || 0); const quantity = Number(confirmQuantities[item.id] || item.quantity); const catalog = catalogPrice(item); const stock = item.variant.stockLevels?.find((level: { branchId: string; quantity: number }) => level.branchId === view.branchId)?.quantity || 0; return Number.isInteger(quantity) && quantity > 0 && price > 0 && catalog > 0 && price >= (item.variant.costPrice || 0) && price < catalog && stock >= quantity }))
-  const confirmationPaymentReady = Boolean(view && view.amountPaid + Number(additionalPayment || 0) <= reviewTotal)
-  const confirmOrder = async () => { if (!view) return; const confirmItems = view.items.map((item) => ({ variantId: item.variantId, quantity: Number(confirmQuantities[item.id] || item.quantity), unitPrice: Number(confirmPrices[item.id] || 0), discount: 0 })); const extraPayment = Number(additionalPayment || 0); const finalPaid = view.amountPaid + extraPayment; const stockError = view.items.some((item) => { const price = Number(confirmPrices[item.id] || 0); const quantity = Number(confirmQuantities[item.id] || item.quantity); return !Number.isInteger(quantity) || quantity <= 0 || price < (item.variant.costPrice || 0) || price >= catalogPrice(item) || catalogPrice(item) <= 0 || (item.variant.stockLevels?.find((stock: { branchId: string; quantity: number }) => stock.branchId === view.branchId)?.quantity || 0) < quantity }); if (stockError || !confirmationReady || !Number.isFinite(extraPayment) || extraPayment < 0 || finalPaid > reviewTotal) { setError("Confirmation requires every final price, quantity, enough stock, and a valid payment amount."); return } await patchOrder({ status: "CONFIRMED", items: confirmItems, amountPaid: finalPaid, paymentMethod: extraPayment > 0 ? paymentMethod : undefined }) }
-  const patchOrder = async (payload: Record<string, unknown>) => { if (!view) return; setSaving(true); try { const res = await fetch(`/api/sales-orders/${view.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); const data = await res.json(); if (!res.ok) throw new Error(data.error); setView(null); setRefund(""); await load() } catch (e) { setError(e instanceof Error ? e.message : "Could not update Sales Order") } finally { setSaving(false) } }
-  const filtered = orders.filter((order) => { const text = `${order.id} ${order.customer?.name || ""} ${order.customer?.phone || ""}`.toLowerCase(); return (status === "ALL" || order.status === status) && (!branchId || order.branchId === branchId) && text.includes(query.toLowerCase()) })
-  const pendingOrders = filtered.filter((order) => order.status === "DRAFT" || order.status === "CONFIRMED")
-  const historyOrders = filtered.filter((order) => order.status === "DELIVERING" || order.status === "COMPLETED" || order.status === "CANCELLED")
-  const openOrder = (order: Order) => { setView(order); setRefund(String(order.amountPaid)); setAdditionalPayment(""); setConfirmPrices(Object.fromEntries(order.items.map((item) => [item.id, order.status === "DRAFT" ? "0" : String(item.unitPrice || item.variant.price || item.variant.product.price || "")]))) ; setError("") }
+  const resetCreate = () => {
+    setCustomerId("");
+    setSelectedBranch(user?.branchId || "");
+    setItems([{ variantId: "", quantity: 1 }]);
+    setDeposit("");
+    setPaymentMethod("CASH");
+    setNote("");
+    setError("");
+    setNewCustomerOpen(false);
+  };
+  const duplicatePhone = React.useMemo(() => {
+    const entered = newCustomer.phones.map(normalizePhone).filter(Boolean);
+    if (new Set(entered).size !== entered.length)
+      return "Each phone number must be unique.";
+    const existing = customers.find((customer) =>
+      (customer.phones || [customer.phone || ""])
+        .map(normalizePhone)
+        .some((phone) => entered.includes(phone)),
+    );
+    return existing
+      ? `This phone already belongs to ${existing.name}. Select that customer instead.`
+      : "";
+  }, [newCustomer.phones, customers]);
+  const createCustomer = async () => {
+    setNewCustomerError("");
+    if (!newCustomer.name.trim()) {
+      setNewCustomerError("Customer name is required.");
+      return;
+    }
+    const phones = newCustomer.phones
+      .map((phone) => phone.trim())
+      .filter(Boolean);
+    if (!phones.length) {
+      setNewCustomerError("At least one phone number is required.");
+      return;
+    }
+    if (duplicatePhone) {
+      setNewCustomerError(duplicatePhone);
+      return;
+    }
+    const res = await fetch("/api/customers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: newCustomer.name,
+        phones,
+        email: newCustomer.email || undefined,
+        address: newCustomer.address || undefined,
+      }),
+    });
+    const data = await res.json();
+    if (res.status === 409 && data.customer) {
+      setCustomers((current) =>
+        current.some((customer) => customer.id === data.customer.id)
+          ? current
+          : [data.customer, ...current],
+      );
+      setCustomerId(data.customer.id);
+      setNewCustomerOpen(false);
+      setNewCustomerError("");
+      return;
+    }
+    if (!res.ok) {
+      setNewCustomerError(data.error || "Could not create customer.");
+      return;
+    }
+    setCustomers((current) => [data.customer, ...current]);
+    setCustomerId(data.customer.id);
+    setNewCustomer({ name: "", phones: [""], email: "", address: "" });
+    setNewCustomerOpen(false);
+  };
+  const duplicateRequestedItem = React.useMemo(() => {
+    const selected = items.map((item) => item.variantId).filter(Boolean);
+    return new Set(selected).size !== selected.length;
+  }, [items]);
+  React.useEffect(() => {
+    if (!duplicateRequestedItem) return;
+    setItems((current) => {
+      const seen = new Set<string>();
+      let changed = false;
+      const next = current.map((item) => {
+        if (!item.variantId || !seen.has(item.variantId)) {
+          if (item.variantId) seen.add(item.variantId);
+          return item;
+        }
+        changed = true;
+        return { ...item, variantId: "" };
+      });
+      if (changed)
+        setError("The same product cannot be requested more than once.");
+      return changed ? next : current;
+    });
+  }, [duplicateRequestedItem]);
+  const createOrder = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError("");
+    const validItems = items.filter(
+      (item) => item.variantId && Number(item.quantity) > 0,
+    );
+    if (!customerId) {
+      setError("Select or create a customer.");
+      return;
+    }
+    if (!validItems.length) {
+      setError("Add at least one requested item.");
+      return;
+    }
+    if (duplicateRequestedItem) {
+      setError("The same product cannot be requested more than once.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/sales-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          branchId: role === "OWNER" ? selectedBranch : user?.branchId,
+          customerId,
+          items: validItems,
+          amountPaid: Number(deposit || 0),
+          paymentMethod: Number(deposit || 0) > 0 ? paymentMethod : undefined,
+          note,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setCreateOpen(false);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save Sales Order");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const catalogPrice = (item: OrderItem) =>
+    (item.variant.price || 0) > 0
+      ? item.variant.price || 0
+      : item.variant.product.price || 0;
+  const reviewTotal =
+    view?.items.reduce(
+      (sum, item) =>
+        sum +
+        Number(confirmQuantities[item.id] || item.quantity) *
+          Number(confirmPrices[item.id] || 0),
+      0,
+    ) || 0;
+  const reviewBalance = Math.max(0, reviewTotal - (view?.amountPaid || 0));
+  const reviewPaymentStatus =
+    (view?.amountPaid || 0) <= 0
+      ? "NO PAY"
+      : reviewTotal > 0 && (view?.amountPaid || 0) >= reviewTotal
+        ? "FULLY PAID"
+        : "PARTIAL PAID";
+  const confirmationReady = Boolean(
+    view &&
+    view.items.length > 0 &&
+    view.items.every((item) => {
+      const price = Number(confirmPrices[item.id] || 0);
+      const quantity = Number(confirmQuantities[item.id] || item.quantity);
+      const catalog = catalogPrice(item);
+      const stock =
+        item.variant.stockLevels?.find(
+          (level: { branchId: string; quantity: number }) =>
+            level.branchId === view.branchId,
+        )?.quantity || 0;
+      return (
+        Number.isInteger(quantity) &&
+        quantity > 0 &&
+        price > 0 &&
+        catalog > 0 &&
+        price >= (item.variant.costPrice || 0) &&
+        price < catalog &&
+        stock >= quantity
+      );
+    }),
+  );
+  const confirmationPaymentReady = Boolean(
+    view && view.amountPaid + Number(additionalPayment || 0) <= reviewTotal,
+  );
+  const confirmOrder = async () => {
+    if (!view) return;
+    const confirmItems = view.items.map((item) => ({
+      variantId: item.variantId,
+      requestedQuantity: Number(confirmQuantities[item.id] || item.quantity),
+      quantity: Number(confirmQuantities[item.id] || item.quantity),
+      unitPrice: Number(confirmPrices[item.id] || 0),
+      discount: 0,
+    }));
+    const extraPayment = Number(additionalPayment || 0);
+    const finalPaid = view.amountPaid + extraPayment;
+    const stockError = view.items.some((item) => {
+      const price = Number(confirmPrices[item.id] || 0);
+      const quantity = Number(confirmQuantities[item.id] || item.quantity);
+      return (
+        !Number.isInteger(quantity) ||
+        quantity <= 0 ||
+        price < (item.variant.costPrice || 0) ||
+        price >= catalogPrice(item) ||
+        catalogPrice(item) <= 0 ||
+        (item.variant.stockLevels?.find(
+          (stock: { branchId: string; quantity: number }) =>
+            stock.branchId === view.branchId,
+        )?.quantity || 0) < quantity
+      );
+    });
+    if (
+      stockError ||
+      !confirmationReady ||
+      !Number.isFinite(extraPayment) ||
+      extraPayment < 0 ||
+      finalPaid > reviewTotal
+    ) {
+      setError(
+        "Confirmation requires every final price, quantity, enough stock, and a valid payment amount.",
+      );
+      return;
+    }
+    await patchOrder({
+      status: "CONFIRMED",
+      items: confirmItems,
+      amountPaid: finalPaid,
+      paymentMethod: extraPayment > 0 ? paymentMethod : undefined,
+    });
+  };
+  const patchOrder = async (payload: Record<string, unknown>) => {
+    if (!view) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/sales-orders/${view.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setView(null);
+      setRefund("");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not update Sales Order");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const filtered = orders.filter((order) => {
+    const text =
+      `${order.id} ${order.customer?.name || ""} ${order.customer?.phone || ""}`.toLowerCase();
+    return (
+      (status === "ALL" || order.status === status) &&
+      (!branchId || order.branchId === branchId) &&
+      text.includes(query.toLowerCase())
+    );
+  });
+  const pendingOrders = filtered.filter(
+    (order) => order.status === "DRAFT" || order.status === "CONFIRMED",
+  );
+  const historyOrders = filtered.filter(
+    (order) =>
+      order.status === "DELIVERING" ||
+      order.status === "COMPLETED" ||
+      order.status === "CANCELLED",
+  );
+  const openOrder = (order: Order) => {
+    setView(order);
+    setRefund(String(order.amountPaid));
+    setAdditionalPayment("");
+    setConfirmPrices(
+      Object.fromEntries(
+        order.items.map((item) => [
+          item.id,
+          order.status === "DRAFT"
+            ? "0"
+            : String(
+                item.unitPrice ||
+                  item.variant.price ||
+                  item.variant.product.price ||
+                  "",
+              ),
+        ]),
+      ),
+    );
+    setError("");
+    setDraftAddVariantId("");
+  };
 
-  return <div className="sales-orders-page w-full min-w-0 max-w-7xl mx-auto p-3 sm:p-4 md:p-6 lg:p-8 space-y-8 min-h-[calc(100vh-4rem)] overflow-x-hidden">
-    <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><ClipboardList className="h-6 w-6 text-primary" /><h1 className="text-2xl font-black">{t("Sales Orders", "အရောင်းအမှာစာများ")}</h1></div><p className="mt-1 text-sm text-muted-foreground">Customer requests and deposits only. Final price, payment settlement, and stock happen in Sales Voucher.</p></div><Button onClick={() => { resetCreate(); setCreateOpen(true) }}><Plus className="mr-2 h-4 w-4" />{t("New Sales Order", "အရောင်းအမှာစာအသစ်")}</Button></div>
-    <div className="flex flex-wrap gap-3 rounded-xl border bg-card p-4"><Input className="max-w-md" placeholder="Search customer or order..." value={query} onChange={(e) => setQuery(e.target.value)} /><select className="h-10 rounded-md border bg-background px-3 text-sm" value={status} onChange={(e) => setStatus(e.target.value)}><option value="ALL">All statuses</option><option value="DRAFT">Draft / No Pay</option><option value="CONFIRMED">Confirmed / Deposit</option><option value="COMPLETED">Completed</option><option value="CANCELLED">Cancelled</option></select>{role === "OWNER" && <select className="h-10 rounded-md border bg-background px-3 text-sm" value={branchId} onChange={(e) => setBranchId(e.target.value)}><option value="">All branches</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select>}</div>
-    <div className="space-y-8">
-      <section className="space-y-4">
-        <div className="flex items-center justify-between gap-3"><h2 className="text-lg font-bold">{t("Pending Sales Orders", "ဆိုင်းငံ့အရောင်းအမှာစာများ")}</h2><Badge variant="outline">{pendingOrders.length}</Badge></div>
-        {loading ? <div className="flex justify-center rounded-xl border p-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div> : pendingOrders.length === 0 ? <div className="rounded-xl border-2 border-dashed p-8 text-center text-sm text-muted-foreground">{t("No pending Sales Orders.", "ဆိုင်းငံ့အရောင်းအမှာစာ မရှိပါ။")}</div> : <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">{pendingOrders.map((order) => <Card key={order.id} className="flex min-w-0 flex-col gap-4 border border-primary/30 bg-card p-4 shadow-sm"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="font-bold">SO-{order.id.slice(-6).toUpperCase()}</h3><p className="mt-1 truncate text-sm font-semibold">{order.customer?.name || t("Missing customer", "ဝယ်သူမရှိပါ")}</p><p className="text-xs text-muted-foreground">{(order.customer?.phones || [order.customer?.phone || ""]).filter(Boolean).join(", ")}</p>{order.branch && <p className="mt-1 text-xs font-semibold text-blue-600">{order.branch.name}</p>}</div><Badge variant={order.status === "CONFIRMED" ? "success" : "outline"}>{order.status === "DRAFT" ? t("DRAFT", "မူကြမ်း") : t("CONFIRMED", "အတည်ပြုပြီး")}</Badge></div><div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200"><span className="font-bold">{t("Requested", "မှာယူထားသည်")}:</span> {order.items.reduce((sum, item) => sum + item.quantity, 0)} {t("units across", "ယူနစ်၊ လိုင်း")}{order.items.length} {t("line", "ခု")}{order.items.length === 1 ? "" : "s"}<br /><span className="font-bold">{t("Advance", "ကြိုတင်ပေးငွေ")}:</span> {order.amountPaid.toLocaleString()} Ks</div><Button className="mt-auto w-full gap-1" onClick={() => openOrder(order)}><Eye className="h-4 w-4" />{t("Review Order", "အမှာစာစစ်ဆေးရန်")}</Button></Card>)}</div>}
-      </section>
-      <section className="space-y-4 border-t border-border pt-6">
-        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><h2 className="text-lg font-bold">{t("Sales Order History", "အရောင်းအမှာစာမှတ်တမ်း")}</h2><Badge variant="outline">{historyOrders.length}</Badge></div>
-        {historyOrders.length === 0 ? <div className="rounded-xl border-2 border-dashed p-8 text-center text-sm text-muted-foreground">{t("No completed, delivering, or cancelled Sales Orders.", "ပြီးစီးသော၊ ပို့ဆောင်နေသော သို့မဟုတ် ပယ်ဖျက်ထားသော အရောင်းအမှာစာ မရှိပါ။")}</div> : <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">{historyOrders.map((order) => <Card key={order.id} className="min-w-0 cursor-pointer p-4 opacity-80 transition-all hover:bg-muted/50 hover:opacity-100" onClick={() => openOrder(order)}><div className="flex items-start justify-between gap-3"><div><h3 className="text-sm font-bold">SO-{order.id.slice(-6).toUpperCase()}</h3><p className="mt-1 text-sm font-semibold">{order.customer?.name || t("Missing customer", "ဝယ်သူမရှိပါ")}</p></div><Badge variant={order.status === "CANCELLED" ? "destructive" : "success"}>{order.status === "CANCELLED" ? t("CANCELLED", "ပယ်ဖျက်ပြီး") : order.status === "DELIVERING" ? t("DELIVERING", "ပို့ဆောင်နေသည်") : t("COMPLETED", "ပြီးစီးပြီး")}</Badge></div><p className="mt-2 text-xs text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()} · {order.items.reduce((sum, item) => sum + item.quantity, 0)} {t("units", "ယူနစ်")}</p><div className="mt-3 flex justify-between rounded-lg bg-muted/50 p-2 text-sm"><span>{t("Advance paid", "ကြိုတင်ပေးငွေ")}</span><span className="font-bold">{order.amountPaid.toLocaleString()} Ks</span></div></Card>)}</div>}
-      </section>
-    </div>
+  const addDraftProduct = () => {
+    if (!view || view.status !== "DRAFT" || !draftAddVariantId) return;
+    const variant = variants.find((item) => item.id === draftAddVariantId);
+    if (!variant) return;
+    if (view.items.some((item) => item.variantId === variant.id)) {
+      setError("The same product cannot be added more than once.");
+      return;
+    }
+    const itemId = `draft-${variant.id}-${Date.now()}`;
+    setView({
+      ...view,
+      items: [
+        ...view.items,
+        {
+          id: itemId,
+          variantId: variant.id,
+          requestedQuantity: 1,
+          quantity: 1,
+          fulfilledQuantity: 0,
+          unitPrice: null,
+          variant,
+        },
+      ],
+    });
+    setConfirmQuantities((current) => ({ ...current, [itemId]: "1" }));
+    setConfirmPrices((current) => ({ ...current, [itemId]: "" }));
+    setDraftAddVariantId("");
+    setError("");
+  };
 
-<Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>{t("New Customer Sales Order", "ဝယ်သူအရောင်းအမှာစာအသစ်")}</DialogTitle></DialogHeader><form onSubmit={createOrder} className="space-y-5">{error && <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}<div className="space-y-2"><div className="flex items-center justify-between"><label className="text-sm font-semibold">Customer *</label><Button type="button" variant="outline" size="sm" onClick={() => setNewCustomerOpen((value) => !value)}><UserPlus className="mr-1 h-4 w-4" />Create Customer</Button></div><SearchableSelect items={customers} value={customerId} onChange={(value) => { setCustomerId(value); setNewCustomerOpen(false); setNewCustomerError("") }} placeholder="Select a named customer" searchPlaceholder="Search customers..." renderItem={(item) => <span>{item.name}{item.phones?.length ? ` · ${item.phones.join(", ")}` : item.phone ? ` · ${item.phone}` : ""}</span>} filterItem={(item, search) => `${item.name} ${(item.phones || [item.phone || ""]).join(" ")}`.toLowerCase().includes(search)} /></div>{newCustomerOpen && <div className="space-y-3 rounded-lg border bg-muted/20 p-4"><div className="grid gap-3 sm:grid-cols-2"><Input placeholder="Name *" value={newCustomer.name} onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })} /><Input placeholder="Email (optional)" value={newCustomer.email} onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })} /><Input placeholder="Address (optional)" value={newCustomer.address} onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })} /></div><div className="space-y-2"><div className="flex items-center justify-between"><label className="text-sm font-semibold">Phone numbers *</label><Button type="button" variant="outline" size="sm" onClick={() => setNewCustomer({ ...newCustomer, phones: [...newCustomer.phones, ""] })}><Plus className="mr-1 h-4 w-4" />Add phone</Button></div>{newCustomer.phones.map((phone, index) => <div key={index} className="flex gap-2"><Input type="tel" placeholder={`Phone ${index + 1}`} value={phone} onChange={(e) => setNewCustomer({ ...newCustomer, phones: newCustomer.phones.map((current, i) => i === index ? e.target.value : current) })} /><Button type="button" variant="ghost" size="icon" disabled={newCustomer.phones.length === 1} onClick={() => setNewCustomer({ ...newCustomer, phones: newCustomer.phones.filter((_, i) => i !== index) })}><X className="h-4 w-4" /></Button></div>)}</div><div className="flex items-center gap-2"><Button type="button" size="sm" onClick={createCustomer}>Save Customer</Button><Button type="button" variant="ghost" size="sm" onClick={() => { setNewCustomerOpen(false); setNewCustomerError("") }}>Cancel</Button>{newCustomerError && <span className="text-xs text-destructive">{newCustomerError}</span>}</div></div>}<div className="space-y-3"><div className="flex items-center justify-between"><label className="text-sm font-semibold">Requested items</label><Button type="button" variant="outline" size="sm" onClick={() => setItems([...items, { variantId: "", quantity: 1 }])}><Plus className="mr-1 h-4 w-4" />Add Item</Button></div>{items.map((item, index) => <div key={index} className="grid grid-cols-[1fr_110px_36px] gap-2"><SearchableSelect items={variants} value={item.variantId} onChange={(value) => setItems(items.map((current, i) => i === index ? { ...current, variantId: value } : current))} placeholder="Select product / variant" searchPlaceholder="Search products..." renderItem={(variant) => <span>{variant.product.name} · {variant.name}</span>} filterItem={(variant, search) => `${variant.product.name} ${variant.name}`.toLowerCase().includes(search)} /><Input type="number" min={1} value={item.quantity} onChange={(e) => setItems(items.map((current, i) => i === index ? { ...current, quantity: Number(e.target.value) } : current))} /><Button type="button" variant="ghost" size="icon" onClick={() => setItems(items.filter((_, i) => i !== index))}><X className="h-4 w-4" /></Button></div>)}</div><div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">No retail price, cost price, or stock quantity is shown or committed here. Those are decided at fulfillment.</div>{role === "OWNER" && <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)}><option value="">Select branch</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select>}<div className="grid gap-3 sm:grid-cols-3"><div><label className="text-sm font-semibold">Advance deposit</label><Input type="number" min={0} value={deposit} onChange={(e) => setDeposit(e.target.value)} placeholder="0 Ks" /></div><div><label className="text-sm font-semibold">Payment method</label><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}><option value="CASH">Cash</option><option value="CARD">Card</option><option value="QR">QR</option><option value="DEBT">Other / Debt</option></select></div><div><label className="text-sm font-semibold">Note</label><Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Customer request note" /></div></div><p className="text-xs text-muted-foreground">No deposit creates a Draft / No Pay order. Any advance creates a Confirmed order. Final payment is settled in Sales Voucher.</p><DialogFooter><Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button><Button type="submit" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Sales Order</Button></DialogFooter></form></DialogContent></Dialog>
-
-    <Dialog open={!!view} onOpenChange={(open) => { if (!open && confirmAction === null) setView(null) }}><DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto"><DialogHeader><DialogTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary" />Sales Order #{view?.id.slice(-6).toUpperCase()}</DialogTitle></DialogHeader>{view && <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted/30 px-4 py-3"><div><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Order status</p><div className="mt-1 flex items-center gap-2"><Badge variant={view.status === "CANCELLED" ? "destructive" : view.status === "CONFIRMED" || view.status === "COMPLETED" ? "success" : "outline"}>{view.status}</Badge><span className="text-sm text-muted-foreground">Created {new Date(view.createdAt).toLocaleString()}</span></div></div><div className="text-right"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Branch</p><p className="font-semibold">{view.branch?.name || "—"}</p></div></div>
-      <div className="grid gap-4 md:grid-cols-2"><section className="rounded-xl border border-border/70 bg-card p-4 shadow-sm"><h3 className="mb-3 flex items-center gap-2 font-bold"><Phone className="h-4 w-4 text-primary" />Customer details</h3><div className="space-y-2 text-sm"><p className="text-base font-bold">{view.customer?.name || "Missing customer"}</p><p className="flex gap-2"><Phone className="h-4 w-4 shrink-0 text-muted-foreground" />{(view.customer?.phones || [view.customer?.phone || ""]).filter(Boolean).join(", ") || "No phone number"}</p><p className="flex gap-2"><Mail className="h-4 w-4 shrink-0 text-muted-foreground" />{view.customer?.email || "No email"}</p><p className="flex gap-2"><MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />{view.customer?.address || "No address"}</p></div></section><section className="rounded-xl border border-border/70 bg-card p-4 shadow-sm"><h3 className="mb-3 flex items-center gap-2 font-bold"><CreditCard className="h-4 w-4 text-primary" />Payment details</h3><div className="grid grid-cols-2 gap-3 text-sm"><div><p className="text-muted-foreground">Advance paid</p><p className="font-bold">{view.amountPaid.toLocaleString()} Ks</p></div><div><p className="text-muted-foreground">Payment status</p><p className="font-bold">{view.status === "DRAFT" ? reviewPaymentStatus : view.depositStatus === "NO_PAY" ? "NO PAY" : view.paymentStatus || view.depositStatus}</p></div><div><p className="text-muted-foreground">Order total</p><p className="font-bold">{(view.status === "DRAFT" ? reviewTotal : (view.total || 0)).toLocaleString()} Ks</p></div><div><p className="text-muted-foreground">Balance</p><p className="font-bold">{(view.status === "DRAFT" ? reviewBalance : Math.max(0, (view.total || 0) - view.amountPaid)).toLocaleString()} Ks</p></div></div></section></div>
-      {view.status === "DRAFT" && <section className="rounded-xl border border-primary/30 bg-primary/5 p-4"><h3 className="font-bold">Requested quantities</h3><p className="mt-1 text-xs text-muted-foreground">Adjust quantities before confirming this draft order.</p><div className="mt-3 space-y-2">{view.items.map((item) => <div key={item.id} className="flex items-center justify-between gap-3 text-sm"><span className="min-w-0 truncate font-semibold">{item.variant.product.name} · {item.variant.name}</span><Input type="number" min={1} value={confirmQuantities[item.id] || String(item.quantity)} onChange={(event) => setConfirmQuantities((current) => ({ ...current, [item.id]: event.target.value }))} className="h-9 w-28" /></div>)}</div></section>}\n      <section className="space-y-3"><div className="flex items-center justify-between"><h3 className="flex items-center gap-2 font-bold"><Package className="h-4 w-4 text-primary" />Products and pricing</h3><span className="text-sm text-muted-foreground">{view.items.reduce((sum, item) => sum + item.quantity, 0)} total units</span></div>{view.items.map((item) => { const available = item.variant.stockLevels?.find((stock: { branchId: string; quantity: number }) => stock.branchId === view.branchId)?.quantity || 0; const price = Number(confirmPrices[item.id] || 0); const invalid = price <= 0 || catalogPrice(item) <= 0 || price < (item.variant.costPrice || 0) || price >= catalogPrice(item); return <div key={item.id} className="rounded-xl border border-border/70 bg-card p-4 shadow-sm"><div className="grid gap-4 lg:grid-cols-[1fr_140px_150px] lg:items-start"><div><p className="text-base font-bold">{item.variant.product.name}</p><p className="text-sm text-muted-foreground">Variant: {item.variant.name}</p><div className="mt-2 grid gap-x-5 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2"><span>Barcode: <strong className="text-foreground">{item.variant.barcode || "—"}</strong></span><span>Product catalog: <strong className="text-foreground">{catalogPrice(item).toLocaleString()} Ks</strong></span><span>Cost price: <strong className="text-foreground">{(item.variant.costPrice || 0).toLocaleString()} Ks</strong></span><span>Fulfilled: <strong className="text-foreground">{item.fulfilledQuantity} / {item.quantity}</strong></span></div></div><div><p className="text-xs font-bold uppercase text-muted-foreground">Requested quantity</p><p className="mt-1 text-2xl font-black">{item.quantity}</p><p className="text-xs text-muted-foreground">Available stock: <strong className={available < item.quantity ? "text-destructive" : "text-foreground"}>{available}</strong></p></div><div>{view.status === "DRAFT" ? <><p className="mb-1 text-xs font-bold uppercase text-muted-foreground">Final sale price</p><Input type="number" min={item.variant.costPrice || 0} max={Math.max(0, catalogPrice(item) - 1)} value={confirmPrices[item.id] || ""} onChange={(event) => setConfirmPrices((current) => ({ ...current, [item.id]: event.target.value }))} /></> : <><p className="text-xs font-bold uppercase text-muted-foreground">Agreed price</p><p className="mt-1 text-xl font-black">{(item.unitPrice || 0).toLocaleString()} Ks</p></>}</div></div>{view.status === "DRAFT" && <div className="mt-3 flex flex-wrap gap-2 text-xs">{available < item.quantity && <span className="font-bold text-destructive">Not enough stock to confirm.</span>}{invalid && <span className="font-bold text-destructive">Final sale price must be greater than or equal to cost and below catalog price.</span>}</div>}</div> })}</section>
-      {(view.note || view.deliveryDate) && <section className="rounded-xl border border-border/70 bg-card p-4 text-sm shadow-sm"><h3 className="mb-2 flex items-center gap-2 font-bold"><CalendarDays className="h-4 w-4 text-primary" />Additional details</h3>{view.note && <p><span className="font-semibold">Note:</span> {view.note}</p>}{view.deliveryDate && <p className="mt-1"><span className="font-semibold">Requested date:</span> {new Date(view.deliveryDate).toLocaleDateString()}</p>}</section>}
-      {view.payments && view.payments.length > 0 && <section className="rounded-xl border border-border/70 bg-card p-4 shadow-sm"><h3 className="mb-3 font-bold">Payment history</h3><div className="space-y-2">{view.payments.map((payment) => <div key={`${payment.createdAt}-${payment.amount}`} className="flex flex-wrap justify-between gap-2 text-sm"><span>{new Date(payment.createdAt).toLocaleString()} · {payment.method}{payment.note ? ` · ${payment.note}` : ""}</span><strong>{payment.amount.toLocaleString()} Ks</strong></div>)}</div></section>}
-      {view.status === "DRAFT" && <section className="rounded-xl border border-primary/30 bg-primary/5 p-4 shadow-sm"><div className="flex flex-col gap-4"><div><h3 className="font-bold">Confirmation payment</h3><p className="text-xs text-muted-foreground">The existing draft advance is carried forward automatically. Any additional payment is optional.</p></div><div className="grid gap-3 sm:grid-cols-3"><div className="rounded-lg bg-card/70 p-3"><p className="text-xs text-muted-foreground">Existing advance</p><p className="font-bold">{view.amountPaid.toLocaleString()} Ks</p></div><div><label className="mb-1 block text-xs font-bold uppercase text-muted-foreground">Additional payment (optional)</label><Input type="number" min={0} value={additionalPayment} onChange={(event) => setAdditionalPayment(event.target.value)} placeholder="0 Ks" /></div><div><label className="mb-1 block text-xs font-bold uppercase text-muted-foreground">Payment method</label><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option value="CASH">Cash</option><option value="CARD">Card</option><option value="QR">QR</option></select></div></div><div className="flex flex-wrap gap-6 text-sm"><span>Total paid after confirmation: <strong>{(view.amountPaid + Number(additionalPayment || 0)).toLocaleString()} Ks</strong></span><span>Balance after confirmation: <strong>{Math.max(0, (view.total || 0) - view.amountPaid - Number(additionalPayment || 0)).toLocaleString()} Ks</strong></span></div></div></section>}
-      {error && <p className="text-sm text-destructive">{localizeSalesOrderError(error, t)}</p>}<div className="flex flex-wrap justify-end gap-2">{view.status === "DRAFT" && <Button disabled={saving || !confirmationReady || !confirmationPaymentReady} onClick={() => setConfirmAction("CONFIRM")}>Confirm Order</Button>}{view.status !== "CANCELLED" && view.status !== "COMPLETED" && <Button variant="destructive" disabled={saving} onClick={() => setConfirmAction("CANCEL")}>Cancel / Refund</Button>}</div><p className="text-xs text-muted-foreground">Confirmation checks every final price, stock, and payment amount. Advance payment is optional. Sales Voucher performs the final stock deduction.</p>
-    </div>}</DialogContent></Dialog>
-
-    <Dialog open={confirmAction !== null} onOpenChange={(open) => !open && setConfirmAction(null)}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{confirmAction === "CONFIRM" ? t("Confirm Sales Order?", "အရောင်းအမှာစာ အတည်ပြုမည်လား။") : t("Cancel / Refund Sales Order?", "အရောင်းအမှာစာကို ပယ်ဖျက်/ပြန်အမ်းမည်လား။")}</DialogTitle>
-        </DialogHeader>
-        <div className="py-2 text-sm text-muted-foreground">
-          {confirmAction === "CONFIRM"
-            ? t("Are you sure you want to confirm this Sales Order? The final prices, stock check, and payment status will be saved.", "ဤအရောင်းအမှာစာကို အတည်ပြုရန် သေချာပါသလား။ နောက်ဆုံးရောင်းဈေး၊ စတော့စစ်ဆေးမှုနှင့် ပေးချေမှုအခြေအနေကို သိမ်းဆည်းမည်။")
-            : t("Are you sure you want to cancel/refund this Sales Order? This action cannot be undone.", "ဤအရောင်းအမှာစာကို ပယ်ဖျက်/ပြန်အမ်းရန် သေချာပါသလား။ ဤလုပ်ဆောင်ချက်ကို ပြန်ပြင်၍မရပါ။")}
+  return (
+    <div className="sales-orders-page w-full min-w-0 max-w-7xl mx-auto p-3 sm:p-4 md:p-6 lg:p-8 space-y-8 min-h-[calc(100vh-4rem)] overflow-x-hidden">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-black">
+              {t("Sales Orders", "အရောင်းအမှာစာများ")}
+            </h1>
+            {pendingOrders.length > 0 && <Badge variant="destructive" className="text-xs">{pendingOrders.length}</Badge>}
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Customer requests and deposits only. Final price, payment
+            settlement, and stock happen in Sales Voucher.
+          </p>
         </div>
-        <DialogFooter>
-          <Button variant="outline" disabled={saving} onClick={() => setConfirmAction(null)}>{t("No, Keep It", "မလုပ်တော့ပါ")}</Button>
-          <Button
-            variant={confirmAction === "CANCEL" ? "destructive" : "default"}
-            disabled={saving}
-            onClick={() => {
-              const action = confirmAction
-              setConfirmAction(null)
-              if (action === "CONFIRM") void confirmOrder()
-              if (action === "CANCEL") void patchOrder({ status: "CANCELLED", refundAmount: Number(refund || 0), paymentMethod })
-            }}
-          >{confirmAction === "CONFIRM" ? t("Yes, Confirm Order", "ဟုတ်ကဲ့၊ အတည်ပြုမည်") : t("Yes, Cancel / Refund", "ဟုတ်ကဲ့၊ ပယ်ဖျက်/ပြန်အမ်းမည်")}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  </div>
+        <Button
+          onClick={() => {
+            resetCreate();
+            setCreateOpen(true);
+          }}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          {t("New Sales Order", "အရောင်းအမှာစာအသစ်")}
+        </Button>
+      </div>
+      <div className="flex flex-wrap gap-3 rounded-xl border bg-card p-4">
+        <Input
+          className="max-w-md"
+          placeholder="Search customer or order..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <select
+          className="h-10 rounded-md border bg-background px-3 text-sm"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        >
+          <option value="ALL">All statuses</option>
+          <option value="DRAFT">Draft / No Pay</option>
+          <option value="CONFIRMED">Confirmed / Deposit</option>
+          <option value="COMPLETED">Completed</option>
+          <option value="CANCELLED">Cancelled</option>
+        </select>
+        {role === "OWNER" && (
+          <select
+            className="h-10 rounded-md border bg-background px-3 text-sm"
+            value={branchId}
+            onChange={(e) => setBranchId(e.target.value)}
+          >
+            <option value="">All branches</option>
+            {branches.map((branch) => (
+              <option key={branch.id} value={branch.id}>
+                {branch.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+      <div className="space-y-8">
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-bold">
+              {t("Pending Sales Orders", "ဆိုင်းငံ့အရောင်းအမှာစာများ")}
+            </h2>
+            <Badge variant="outline">{pendingOrders.length}</Badge>
+          </div>
+          {loading ? (
+            <div className="flex justify-center rounded-xl border p-10">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : pendingOrders.length === 0 ? (
+            <div className="rounded-xl border-2 border-dashed p-8 text-center text-sm text-muted-foreground">
+              {t("No pending Sales Orders.", "ဆိုင်းငံ့အရောင်းအမှာစာ မရှိပါ။")}
+            </div>
+          ) : (
+            <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {pendingOrders.map((order) => (
+                <Card
+                  key={order.id}
+                  className="flex min-w-0 flex-col gap-4 border border-primary/30 bg-card p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="font-bold">
+                        SO-{order.id.slice(-6).toUpperCase()}
+                      </h3>
+                      <p className="mt-1 truncate text-sm font-semibold">
+                        {order.customer?.name ||
+                          t("Missing customer", "ဝယ်သူမရှိပါ")}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {(
+                          order.customer?.phones || [
+                            order.customer?.phone || "",
+                          ]
+                        )
+                          .filter(Boolean)
+                          .join(", ")}
+                      </p>
+                      {order.branch && (
+                        <p className="mt-1 text-xs font-semibold text-blue-600">
+                          {order.branch.name}
+                        </p>
+                      )}
+                    </div>
+                    <Badge
+                      variant={
+                        order.status === "CONFIRMED" ? "success" : "outline"
+                      }
+                    >
+                      {order.status === "DRAFT"
+                        ? t("DRAFT", "မူကြမ်း")
+                        : t("CONFIRMED", "အတည်ပြုပြီး")}
+                    </Badge>
+                  </div>
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
+                    <span className="font-bold">
+                      {t("Requested", "မှာယူထားသည်")}:
+                    </span>{" "}
+                    {order.items.reduce((sum, item) => sum + item.quantity, 0)}{" "}
+                    {t("units across", "ယူနစ်၊ လိုင်း")}
+                    {order.items.length} {t("line", "ခု")}
+                    {order.items.length === 1 ? "" : "s"}
+                    <br />
+                    <span className="font-bold">
+                      {t("Advance", "ကြိုတင်ပေးငွေ")}:
+                    </span>{" "}
+                    {order.amountPaid.toLocaleString()} Ks
+                  </div>
+                  <Button
+                    className="mt-auto w-full gap-1"
+                    onClick={() => openOrder(order)}
+                  >
+                    <Eye className="h-4 w-4" />
+                    {t("Review Order", "အမှာစာစစ်ဆေးရန်")}
+                  </Button>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+        <section className="space-y-4 border-t border-border pt-6">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <h2 className="text-lg font-bold">
+              {t("Sales Order History", "အရောင်းအမှာစာမှတ်တမ်း")}
+            </h2>
+            <Badge variant="outline">{historyOrders.length}</Badge>
+          </div>
+          {historyOrders.length === 0 ? (
+            <div className="rounded-xl border-2 border-dashed p-8 text-center text-sm text-muted-foreground">
+              {t(
+                "No completed, delivering, or cancelled Sales Orders.",
+                "ပြီးစီးသော၊ ပို့ဆောင်နေသော သို့မဟုတ် ပယ်ဖျက်ထားသော အရောင်းအမှာစာ မရှိပါ။",
+              )}
+            </div>
+          ) : (
+            <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {historyOrders.map((order) => (
+                <Card
+                  key={order.id}
+                  className="min-w-0 cursor-pointer p-4 opacity-80 transition-all hover:bg-muted/50 hover:opacity-100"
+                  onClick={() => openOrder(order)}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-bold">
+                        SO-{order.id.slice(-6).toUpperCase()}
+                      </h3>
+                      <p className="mt-1 text-sm font-semibold">
+                        {order.customer?.name ||
+                          t("Missing customer", "ဝယ်သူမရှိပါ")}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={
+                        order.status === "CANCELLED" ? "destructive" : "success"
+                      }
+                    >
+                      {order.status === "CANCELLED"
+                        ? t("CANCELLED", "ပယ်ဖျက်ပြီး")
+                        : order.status === "DELIVERING"
+                          ? t("DELIVERING", "ပို့ဆောင်နေသည်")
+                          : t("COMPLETED", "ပြီးစီးပြီး")}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {new Date(order.createdAt).toLocaleDateString()} ·{" "}
+                    {order.items.reduce((sum, item) => sum + item.quantity, 0)}{" "}
+                    {t("units", "ယူနစ်")}
+                  </p>
+                  <div className="mt-3 flex justify-between rounded-lg bg-muted/50 p-2 text-sm">
+                    <span>{t("Advance paid", "ကြိုတင်ပေးငွေ")}</span>
+                    <span className="font-bold">
+                      {order.amountPaid.toLocaleString()} Ks
+                    </span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {t("New Customer Sales Order", "ဝယ်သူအရောင်းအမှာစာအသစ်")}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={createOrder} className="space-y-5">
+            {error && (
+              <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold">Customer *</label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setNewCustomerOpen((value) => !value)}
+                >
+                  <UserPlus className="mr-1 h-4 w-4" />
+                  Create Customer
+                </Button>
+              </div>
+              <SearchableSelect
+                items={customers}
+                value={customerId}
+                onChange={(value) => {
+                  setCustomerId(value);
+                  setNewCustomerOpen(false);
+                  setNewCustomerError("");
+                }}
+                placeholder="Select a named customer"
+                searchPlaceholder="Search customers..."
+                renderItem={(item) => (
+                  <span>
+                    {item.name}
+                    {item.phones?.length
+                      ? ` · ${item.phones.join(", ")}`
+                      : item.phone
+                        ? ` · ${item.phone}`
+                        : ""}
+                  </span>
+                )}
+                filterItem={(item, search) =>
+                  `${item.name} ${(item.phones || [item.phone || ""]).join(" ")}`
+                    .toLowerCase()
+                    .includes(search)
+                }
+              />
+            </div>
+            {newCustomerOpen && (
+              <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Input
+                    placeholder="Name *"
+                    value={newCustomer.name}
+                    onChange={(e) =>
+                      setNewCustomer({ ...newCustomer, name: e.target.value })
+                    }
+                  />
+                  <Input
+                    placeholder="Email (optional)"
+                    value={newCustomer.email}
+                    onChange={(e) =>
+                      setNewCustomer({ ...newCustomer, email: e.target.value })
+                    }
+                  />
+                  <Input
+                    placeholder="Address (optional)"
+                    value={newCustomer.address}
+                    onChange={(e) =>
+                      setNewCustomer({
+                        ...newCustomer,
+                        address: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-semibold">
+                      Phone numbers *
+                    </label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setNewCustomer({
+                          ...newCustomer,
+                          phones: [...newCustomer.phones, ""],
+                        })
+                      }
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      Add phone
+                    </Button>
+                  </div>
+                  {newCustomer.phones.map((phone, index) => (
+                    <div key={index} className="flex gap-2">
+                      <PhoneInput
+                        placeholder={`Phone ${index + 1}`}
+                        value={phone}
+                        onChange={(e) =>
+                          setNewCustomer({
+                            ...newCustomer,
+                            phones: newCustomer.phones.map((current, i) =>
+                              i === index ? e.target.value : current,
+                            ),
+                          })
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={newCustomer.phones.length === 1}
+                        onClick={() =>
+                          setNewCustomer({
+                            ...newCustomer,
+                            phones: newCustomer.phones.filter(
+                              (_, i) => i !== index,
+                            ),
+                          })
+                        }
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button type="button" size="sm" onClick={createCustomer}>
+                    Save Customer
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setNewCustomerOpen(false);
+                      setNewCustomerError("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  {newCustomerError && (
+                    <span className="text-xs text-destructive">
+                      {newCustomerError}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold">Requested items</label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setItems([...items, { variantId: "", quantity: 1 }])
+                  }
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add Item
+                </Button>
+              </div>
+              {items.map((item, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-[1fr_110px_36px] gap-2"
+                >
+                  <SearchableSelect
+                    items={variants}
+                    value={item.variantId}
+                    onChange={(value) =>
+                      setItems(
+                        items.map((current, i) =>
+                          i === index
+                            ? { ...current, variantId: value }
+                            : current,
+                        ),
+                      )
+                    }
+                    placeholder="Select product / variant"
+                    searchPlaceholder="Search products..."
+                    renderItem={(variant) => (
+                      <span>
+                        {variant.product.name} · {variant.name}
+                      </span>
+                    )}
+                    filterItem={(variant, search) =>
+                      `${variant.product.name} ${variant.name}`
+                        .toLowerCase()
+                        .includes(search)
+                    }
+                  />
+                  <Input
+                    type="number"
+                    min={1}
+                    value={item.quantity}
+                    onChange={(e) =>
+                      setItems(
+                        items.map((current, i) =>
+                          i === index
+                            ? { ...current, quantity: Number(e.target.value) }
+                            : current,
+                        ),
+                      )
+                    }
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() =>
+                      setItems(items.filter((_, i) => i !== index))
+                    }
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
+              No retail price, cost price, or stock quantity is shown or
+              committed here. Those are decided at fulfillment.
+            </div>
+            {role === "OWNER" && (
+              <select
+                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                value={selectedBranch}
+                onChange={(e) => setSelectedBranch(e.target.value)}
+              >
+                <option value="">Select branch</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <label className="text-sm font-semibold">Advance deposit</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={deposit}
+                  onChange={(e) => setDeposit(e.target.value)}
+                  placeholder="0 Ks"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold">Payment method</label>
+                <select
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                >
+                  <option value="CASH">Cash</option>
+                  <option value="CARD">Card</option>
+                  <option value="QR">QR</option>
+                  {/* <option value="DEBT">Other / Debt</option> */}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-semibold">Note</label>
+                <Input
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Customer request note"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              No deposit creates a Draft / No Pay order. Any advance creates a
+              Confirmed order. Final payment is settled in Sales Voucher.
+            </p>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Sales Order
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!view}
+        onOpenChange={(open) => {
+          if (!open && confirmAction === null) setView(null);
+        }}
+      >
+        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-primary" />
+              Sales Order #{view?.id.slice(-6).toUpperCase()}
+            </DialogTitle>
+          </DialogHeader>
+          {view && (
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted/30 px-4 py-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    Order status
+                  </p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <Badge
+                      variant={
+                        view.status === "CANCELLED"
+                          ? "destructive"
+                          : view.status === "CONFIRMED" ||
+                              view.status === "COMPLETED"
+                            ? "success"
+                            : "outline"
+                      }
+                    >
+                      {view.status}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      Created {new Date(view.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    Branch
+                  </p>
+                  <p className="font-semibold">{view.branch?.name || "—"}</p>
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <section className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
+                  <h3 className="mb-3 flex items-center gap-2 font-bold">
+                    <Phone className="h-4 w-4 text-primary" />
+                    Customer details
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-base font-bold">
+                      {view.customer?.name || "Missing customer"}
+                    </p>
+                    <p className="flex gap-2">
+                      <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      {(view.customer?.phones || [view.customer?.phone || ""])
+                        .filter(Boolean)
+                        .join(", ") || "No phone number"}
+                    </p>
+                    <p className="flex gap-2">
+                      <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      {view.customer?.email || "No email"}
+                    </p>
+                    <p className="flex gap-2">
+                      <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      {view.customer?.address || "No address"}
+                    </p>
+                  </div>
+                </section>
+                <section className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
+                  <h3 className="mb-3 flex items-center gap-2 font-bold">
+                    <CreditCard className="h-4 w-4 text-primary" />
+                    Payment details
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Advance paid</p>
+                      <p className="font-bold">
+                        {view.amountPaid.toLocaleString()} Ks
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Payment status</p>
+                      <p className="font-bold">
+                        {view.status === "DRAFT"
+                          ? reviewPaymentStatus
+                          : view.depositStatus === "NO_PAY"
+                            ? "NO PAY"
+                            : view.paymentStatus || view.depositStatus}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Order total</p>
+                      <p className="font-bold">
+                        {(view.status === "DRAFT"
+                          ? reviewTotal
+                          : view.total || 0
+                        ).toLocaleString()}{" "}
+                        Ks
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Balance</p>
+                      <p className="font-bold">
+                        {(view.status === "DRAFT"
+                          ? reviewBalance
+                          : Math.max(0, (view.total || 0) - view.amountPaid)
+                        ).toLocaleString()}{" "}
+                        Ks
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              </div>
+              {" "}
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="flex items-center gap-2 font-bold">
+                    <Package className="h-4 w-4 text-primary" />
+                    Products and pricing
+                  </h3>
+                  <span className="text-sm text-muted-foreground">
+                    {view.items.reduce((sum, item) => sum + item.quantity, 0)}{" "}
+                    total units
+                  </span>
+                </div>
+                {view.status === "DRAFT" && (
+                  <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+                    <p className="mb-2 text-xs font-semibold text-muted-foreground">
+                      Add another product before confirming this order.
+                    </p>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <SearchableSelect
+                        items={variants.filter(
+                          (variant) =>
+                            !view.items.some(
+                              (item) => item.variantId === variant.id,
+                            ),
+                        )}
+                        value={draftAddVariantId}
+                        onChange={setDraftAddVariantId}
+                        placeholder="Select product / variant"
+                        searchPlaceholder="Search products..."
+                        renderItem={(variant) => (
+                          <span>
+                            {variant.product.name} · {variant.name}
+                          </span>
+                        )}
+                        filterItem={(variant, search) =>
+                          `${variant.product.name} ${variant.name}`
+                            .toLowerCase()
+                            .includes(search)
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!draftAddVariantId}
+                        onClick={addDraftProduct}
+                      >
+                        <Plus className="mr-1 h-4 w-4" />
+                        Add product
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {view.items.map((item) => {
+                  const available =
+                    item.variant.stockLevels?.find(
+                      (stock: { branchId: string; quantity: number }) =>
+                        stock.branchId === view.branchId,
+                    )?.quantity || 0;
+                  const price = Number(confirmPrices[item.id] || 0);
+                  const invalid =
+                    price <= 0 ||
+                    catalogPrice(item) <= 0 ||
+                    price < (item.variant.costPrice || 0) ||
+                    price >= catalogPrice(item);
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-border/70 bg-card p-4 shadow-sm"
+                    >
+                      <div className="grid gap-4 lg:grid-cols-[1fr_140px_150px_auto] lg:items-start">
+                        <div>
+                          <p className="text-base font-bold">
+                            {item.variant.product.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Variant: {item.variant.name}
+                          </p>
+                          <div className="mt-2 grid gap-x-5 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2">
+                            <span>
+                              Barcode:{" "}
+                              <strong className="text-foreground">
+                                {item.variant.barcode || "—"}
+                              </strong>
+                            </span>
+                            <span>
+                              Product catalog:{" "}
+                              <strong className="text-foreground">
+                                {catalogPrice(item).toLocaleString()} Ks
+                              </strong>
+                            </span>
+                            <span>
+                              Cost price:{" "}
+                              <strong className="text-foreground">
+                                {(item.variant.costPrice || 0).toLocaleString()}{" "}
+                                Ks
+                              </strong>
+                            </span>
+                            <span>
+                              Fulfilled:{" "}
+                              <strong className="text-foreground">
+                                {item.fulfilledQuantity} / {item.quantity}
+                              </strong>
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold uppercase text-muted-foreground">
+                            Requested quantity
+                          </p>
+                          {view.status === "DRAFT" ? (
+                            <Input
+                              type="number"
+                              min={1}
+                              value={
+                                confirmQuantities[item.id] ||
+                                String(item.quantity)
+                              }
+                              onChange={(event) =>
+                                setConfirmQuantities((current) => ({
+                                  ...current,
+                                  [item.id]: event.target.value,
+                                }))
+                              }
+                              className="mt-1 h-10 w-full text-lg font-bold"
+                            />
+                          ) : (
+                            <p className="mt-1 text-2xl font-black">
+                              {item.quantity}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Available stock:{" "}
+                            <strong
+                              className={
+                                available < item.quantity
+                                  ? "text-destructive"
+                                  : "text-foreground"
+                              }
+                            >
+                              {available}
+                            </strong>
+                          </p>
+                        </div>
+                        <div>
+                          {view.status === "DRAFT" ? (
+                            <>
+                              <p className="mb-1 text-xs font-bold uppercase text-muted-foreground">
+                                Final sale price
+                              </p>
+                              <Input
+                                type="number"
+                                min={item.variant.costPrice || 0}
+                                max={Math.max(0, catalogPrice(item) - 1)}
+                                value={confirmPrices[item.id] || ""}
+                                onChange={(event) =>
+                                  setConfirmPrices((current) => ({
+                                    ...current,
+                                    [item.id]: event.target.value,
+                                  }))
+                                }
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-xs font-bold uppercase text-muted-foreground">
+                                Agreed price
+                              </p>
+                              <p className="mt-1 text-xl font-black">
+                                {(item.unitPrice || 0).toLocaleString()} Ks
+                              </p>
+                            </>
+                          )}
+                        </div>
+                        {view.status === "DRAFT" && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            disabled={view.items.length <= 1}
+                            title="Remove product"
+                            onClick={() => {
+                              setView((current) =>
+                                current
+                                  ? {
+                                      ...current,
+                                      items: current.items.filter(
+                                        (currentItem) =>
+                                          currentItem.id !== item.id,
+                                      ),
+                                    }
+                                  : current,
+                              );
+                              setConfirmQuantities((current) => {
+                                const next = { ...current };
+                                delete next[item.id];
+                                return next;
+                              });
+                              setConfirmPrices((current) => {
+                                const next = { ...current };
+                                delete next[item.id];
+                                return next;
+                              });
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      {view.status === "DRAFT" && (
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                          {available < item.quantity && (
+                            <span className="font-bold text-destructive">
+                              Not enough stock to confirm.
+                            </span>
+                          )}
+                          {invalid && (
+                            <span className="font-bold text-destructive">
+                              Final sale price must be greater than or equal to
+                              cost and below catalog price.
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </section>
+              {(view.note || view.deliveryDate) && (
+                <section className="rounded-xl border border-border/70 bg-card p-4 text-sm shadow-sm">
+                  <h3 className="mb-2 flex items-center gap-2 font-bold">
+                    <CalendarDays className="h-4 w-4 text-primary" />
+                    Additional details
+                  </h3>
+                  {view.note && (
+                    <p>
+                      <span className="font-semibold">Note:</span> {view.note}
+                    </p>
+                  )}
+                  {view.deliveryDate && (
+                    <p className="mt-1">
+                      <span className="font-semibold">Requested date:</span>{" "}
+                      {new Date(view.deliveryDate).toLocaleDateString()}
+                    </p>
+                  )}
+                </section>
+              )}
+              {view.payments && view.payments.length > 0 && (
+                <section className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
+                  <h3 className="mb-3 font-bold">Payment history</h3>
+                  <div className="space-y-2">
+                    {view.payments.map((payment) => (
+                      <div
+                        key={`${payment.createdAt}-${payment.amount}`}
+                        className="flex flex-wrap justify-between gap-2 text-sm"
+                      >
+                        <span>
+                          {new Date(payment.createdAt).toLocaleString()} ·{" "}
+                          {payment.method}
+                          {payment.note ? ` · ${payment.note}` : ""}
+                        </span>
+                        <strong>{payment.amount.toLocaleString()} Ks</strong>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+              {view.status === "DRAFT" && (
+                <section className="rounded-xl border border-primary/30 bg-primary/5 p-4 shadow-sm">
+                  <div className="flex flex-col gap-4">
+                    <div>
+                      <h3 className="font-bold">Confirmation payment</h3>
+                      <p className="text-xs text-muted-foreground">
+                        The existing draft advance is carried forward
+                        automatically. Any additional payment is optional.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-lg bg-card/70 p-3">
+                        <p className="text-xs text-muted-foreground">
+                          Existing advance
+                        </p>
+                        <p className="font-bold">
+                          {view.amountPaid.toLocaleString()} Ks
+                        </p>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-bold uppercase text-muted-foreground">
+                          Additional payment (optional)
+                        </label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={additionalPayment}
+                          onChange={(event) =>
+                            setAdditionalPayment(event.target.value)
+                          }
+                          placeholder="0 Ks"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-bold uppercase text-muted-foreground">
+                          Payment method
+                        </label>
+                        <select
+                          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                          value={paymentMethod}
+                          onChange={(event) =>
+                            setPaymentMethod(event.target.value)
+                          }
+                        >
+                          <option value="CASH">Cash</option>
+                          <option value="CARD">Card</option>
+                          <option value="QR">QR</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-6 text-sm">
+                      <span>
+                        Total paid after confirmation:{" "}
+                        <strong>
+                          {(
+                            view.amountPaid + Number(additionalPayment || 0)
+                          ).toLocaleString()}{" "}
+                          Ks
+                        </strong>
+                      </span>
+                      <span>
+                        Balance after confirmation:{" "}
+                        <strong>
+                          {Math.max(
+                            0,
+                            (view.total || 0) -
+                              view.amountPaid -
+                              Number(additionalPayment || 0),
+                          ).toLocaleString()}{" "}
+                          Ks
+                        </strong>
+                      </span>
+                    </div>
+                  </div>
+                </section>
+              )}
+              {error && (
+                <p className="text-sm text-destructive">
+                  {localizeSalesOrderError(error, t)}
+                </p>
+              )}
+              <div className="flex flex-wrap justify-end gap-2">
+                {view.status === "DRAFT" && (
+                  <Button
+                    disabled={
+                      saving || !confirmationReady || !confirmationPaymentReady
+                    }
+                    onClick={() => setConfirmAction("CONFIRM")}
+                  >
+                    Confirm Order
+                  </Button>
+                )}
+                {view.status !== "CANCELLED" && view.status !== "COMPLETED" && (
+                  <Button
+                    variant="destructive"
+                    disabled={saving}
+                    onClick={() => setConfirmAction("CANCEL")}
+                  >
+                    Cancel / Refund
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Confirmation checks every final price, stock, and payment
+                amount. Advance payment is optional. Sales Voucher performs the
+                final stock deduction.
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={confirmAction !== null}
+        onOpenChange={(open) => !open && setConfirmAction(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {confirmAction === "CONFIRM"
+                ? t("Confirm Sales Order?", "အရောင်းအမှာစာ အတည်ပြုမည်လား။")
+                : t(
+                    "Cancel / Refund Sales Order?",
+                    "အရောင်းအမှာစာကို ပယ်ဖျက်/ပြန်အမ်းမည်လား။",
+                  )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 text-sm text-muted-foreground">
+            {confirmAction === "CONFIRM"
+              ? t(
+                  "Are you sure you want to confirm this Sales Order? The final prices, stock check, and payment status will be saved.",
+                  "ဤအရောင်းအမှာစာကို အတည်ပြုရန် သေချာပါသလား။ နောက်ဆုံးရောင်းဈေး၊ စတော့စစ်ဆေးမှုနှင့် ပေးချေမှုအခြေအနေကို သိမ်းဆည်းမည်။",
+                )
+              : t(
+                  "Are you sure you want to cancel/refund this Sales Order? This action cannot be undone.",
+                  "ဤအရောင်းအမှာစာကို ပယ်ဖျက်/ပြန်အမ်းရန် သေချာပါသလား။ ဤလုပ်ဆောင်ချက်ကို ပြန်ပြင်၍မရပါ။",
+                )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={saving}
+              onClick={() => setConfirmAction(null)}
+            >
+              {t("No, Keep It", "မလုပ်တော့ပါ")}
+            </Button>
+            <Button
+              variant={confirmAction === "CANCEL" ? "destructive" : "default"}
+              disabled={saving}
+              onClick={() => {
+                const action = confirmAction;
+                setConfirmAction(null);
+                if (action === "CONFIRM") void confirmOrder();
+                if (action === "CANCEL")
+                  void patchOrder({
+                    status: "CANCELLED",
+                    refundAmount: Number(refund || 0),
+                    paymentMethod,
+                  });
+              }}
+            >
+              {confirmAction === "CONFIRM"
+                ? t("Yes, Confirm Order", "ဟုတ်ကဲ့၊ အတည်ပြုမည်")
+                : t("Yes, Cancel / Refund", "ဟုတ်ကဲ့၊ ပယ်ဖျက်/ပြန်အမ်းမည်")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }

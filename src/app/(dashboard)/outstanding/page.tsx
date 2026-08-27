@@ -263,6 +263,7 @@ export default function OutstandingPage() {
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <HandCoins className="h-7 w-7 text-amber-500" />
             {t("Outstanding Debt Collection Center", "ရရန်ရှိ ကြွေးကျန်များ စီမံခန့်ခွဲရေး စင်တာ")}
+            {totalDebtors > 0 && <Badge variant="destructive" className="text-xs">{totalDebtors}</Badge>}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             {t(

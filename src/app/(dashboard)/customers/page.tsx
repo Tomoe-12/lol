@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
 import {
   Dialog,
   DialogContent,
@@ -338,9 +339,9 @@ export default function CustomersPage() {
             
             <div className="space-y-2">
               <label className="text-sm font-semibold">Phone</label>
-              <Input
+              <PhoneInput
                 required
-                placeholder="e.g. 09-123456789"
+                placeholder="09xxxxxxxxx"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
               />

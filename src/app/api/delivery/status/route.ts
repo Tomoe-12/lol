@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper"
+import { isValidMyanmarPhone, normalizePhone } from "@/lib/phone"
 
 export async function PATCH(request: Request) {
   try {
@@ -33,9 +34,11 @@ export async function PATCH(request: Request) {
     const normalizedReceiptNumber = typeof receiptNumber === "string" ? receiptNumber.trim() : existing.deliveryReceiptNumber || ""
     if (deliveryStatus === "DELIVERED" && !normalizedServiceName) return NextResponse.json({ error: "Enter the delivery service name." }, { status: 400 })
     if (deliveryStatus === "DELIVERED" && normalizedServiceName.toLowerCase() !== "own staff delivery" && !normalizedReceiptNumber) return NextResponse.json({ error: "Enter the delivery receipt or tracking number for an external delivery service." }, { status: 400 })
+    const phones = [delivererPhone, receiverPhone, servicePhone].filter((phone) => typeof phone === "string" && phone.trim())
+    if (phones.some((phone) => !isValidMyanmarPhone(normalizePhone(phone)))) return NextResponse.json({ error: "Delivery phone numbers must be exactly 11 digits and start with 09." }, { status: 400 })
     const permission = checkStaffPermission(staff, "delivery", "write", existing.branchId)
     if (!permission.allowed) return permission.errorResponse || NextResponse.json({ error: "Forbidden" }, { status: 403 })
-    const order = await prisma.salesOrder.update({ where: { id: salesOrderId }, data: { deliveryStatus, status: deliveryStatus === "DELIVERED" ? "COMPLETED" : "DELIVERING", deliveryServiceName: normalizedServiceName || null, deliveryServicePhone: typeof servicePhone === "string" ? servicePhone.trim() || null : existing.deliveryServicePhone, deliveryReceiptNumber: normalizedReceiptNumber || null, ...(deliveryStatus === "DELIVERED" ? { deliveryDelivererName: typeof delivererName === "string" ? delivererName.trim() || null : null, deliveryReceiverName: typeof receiverName === "string" ? receiverName.trim() || null : null, deliveryDelivererPhone: typeof delivererPhone === "string" ? delivererPhone.trim() || null : null, deliveryReceiverPhone: typeof receiverPhone === "string" ? receiverPhone.trim() || null : null } : {}) } })
+    const order = await prisma.salesOrder.update({ where: { id: salesOrderId }, data: { deliveryStatus, status: deliveryStatus === "DELIVERED" ? "COMPLETED" : "DELIVERING", deliveryServiceName: normalizedServiceName || null, deliveryServicePhone: typeof servicePhone === "string" ? normalizePhone(servicePhone) || null : existing.deliveryServicePhone, deliveryReceiptNumber: normalizedReceiptNumber || null, ...(deliveryStatus === "DELIVERED" ? { deliveryDelivererName: typeof delivererName === "string" ? delivererName.trim() || null : null, deliveryReceiverName: typeof receiverName === "string" ? receiverName.trim() || null : null, deliveryDelivererPhone: typeof delivererPhone === "string" ? normalizePhone(delivererPhone) || null : null, deliveryReceiverPhone: typeof receiverPhone === "string" ? normalizePhone(receiverPhone) || null : null } : {}) } })
     return NextResponse.json({ success: true, order })
 
   } catch (error) {

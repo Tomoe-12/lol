@@ -126,7 +126,7 @@ export default function ReportsPage() {
   // 1. Sales Data & COGS
   const salesSummary = useMemo(() => {
     if (!data) return { totalRevenue: 0, posRevenue: 0, orderRevenue: 0, txCount: 0, totalCOGS: 0, grossProfit: 0 }
-    const posRevenue = data.transactions.reduce((sum, tx) => sum + tx.total, 0)
+    const posRevenue = data.transactions.filter(tx => !tx.salesOrderId).reduce((sum, tx) => sum + tx.total, 0)
     const orderRevenue = data.orderPayments.reduce((sum, p) => sum + p.amount, 0)
     
     // Calculate COGS
@@ -139,7 +139,7 @@ export default function ReportsPage() {
     })
 
     let orderCOGS = 0
-    data.salesOrders.forEach(order => {
+      data.salesOrders.filter(order => !order.fulfillmentTransactions?.length).forEach(order => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       order.items.forEach((item: any) => {
         orderCOGS += (item.quantity * (item.unitCost || 0))
@@ -185,7 +185,7 @@ export default function ReportsPage() {
     if (!data) return []
     const staffMap = new Map<string, { name: string, role: string, posRevenue: number, orderRevenue: number, txCount: number }>()
     
-    data.transactions.forEach(tx => {
+    data.transactions.filter(tx => !tx.salesOrderId).forEach(tx => {
       const staffName = tx.staff?.name || "Unknown"
       const role = tx.staff?.role || "UNKNOWN"
       const current = staffMap.get(staffName) || { name: staffName, role, posRevenue: 0, orderRevenue: 0, txCount: 0 }
@@ -195,8 +195,8 @@ export default function ReportsPage() {
     })
 
     data.orderPayments.forEach(p => {
-      const staffName = "System (Sales Orders)"
-      const role = "SYSTEM"
+      const staffName = p.collectedByStaff?.name || p.salesOrder?.createdByStaff?.name || "Unknown Staff"
+      const role = p.collectedByStaff?.role || p.salesOrder?.createdByStaff?.role || "UNKNOWN"
       const current = staffMap.get(staffName) || { name: staffName, role, posRevenue: 0, orderRevenue: 0, txCount: 0 }
       current.orderRevenue += p.amount
       current.txCount += 1
@@ -223,6 +223,16 @@ export default function ReportsPage() {
     const refunds = data.purchaseOrders.reduce((sum, order) => sum + (order.refundAmount || 0), 0)
     return { outflow, refunds, net: outflow - refunds }
   }, [data])
+
+  const cashFlowSummary = useMemo(() => {
+    if (!data) return { posInflow: 0, salesOrderInflow: 0, totalInflow: 0, expenseOutflow: 0, purchaseOutflow: 0, net: 0 }
+    const posInflow = data.transactions.reduce((sum, tx) => sum + tx.total, 0)
+    const salesOrderInflow = data.orderPayments.reduce((sum, payment) => sum + payment.amount, 0)
+    const totalInflow = posInflow + salesOrderInflow
+    const expenseOutflow = data.expenses.reduce((sum, expense) => sum + expense.amount, 0)
+    const purchaseOutflow = purchaseCashFlowSummary.net
+    return { posInflow, salesOrderInflow, totalInflow, expenseOutflow, purchaseOutflow, net: totalInflow - expenseOutflow - purchaseOutflow }
+  }, [data, purchaseCashFlowSummary.net])
 
   // 5. Profit & Loss Time Series
   const pnlData = useMemo(() => {
@@ -252,7 +262,7 @@ export default function ReportsPage() {
       day.revenue += p.amount
     })
 
-    data.salesOrders.forEach(order => {
+    data.salesOrders.filter(order => !String(order.note || "").startsWith("POS transaction #")).forEach(order => {
       const day = getDay(order.createdAt)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       order.items.forEach((item: any) => {
@@ -300,7 +310,7 @@ export default function ReportsPage() {
       b.revenue += p.amount
     })
 
-    data.salesOrders.forEach(order => {
+    data.salesOrders.filter(order => !String(order.note || "").startsWith("POS transaction #")).forEach(order => {
       const b = getBranch(order.branch?.name)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       order.items.forEach((item: any) => {
@@ -440,6 +450,15 @@ export default function ReportsPage() {
           <CardHeader className="pb-2">
             <CardDescription>{t("Supplier Cash Flow", "ပေးသွင်းသူ ငွေစီးဆင်းမှု")}</CardDescription>
             <CardTitle className="text-2xl text-red-600">{loading ? "..." : `${purchaseCashFlowSummary.net.toLocaleString()} Ks`}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>{t("Net Cash Flow", "အသားတင် ငွေစီးဆင်းမှု")}</CardDescription>
+            <CardTitle className={`text-2xl ${cashFlowSummary.net >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+              {loading ? "..." : `${cashFlowSummary.net.toLocaleString()} Ks`}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">Sales-order deposits: {cashFlowSummary.salesOrderInflow.toLocaleString()} Ks</p>
           </CardHeader>
         </Card>
       </div>

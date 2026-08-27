@@ -4,6 +4,8 @@ import * as React from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 import { useCartStore } from "@/lib/store/useCartStore"
 import { useLanguage } from "@/providers/language-provider"
 import { Check, CreditCard, Banknote, QrCode, AlertCircle, HandCoins, User, Truck, Phone, MapPin } from "lucide-react"
@@ -17,6 +19,7 @@ interface PaymentDialogProps {
 }
 
 type PaymentMethodType = "CASH" | "CARD" | "QR" | "SPLIT" | "DEBT"
+type CustomerOption = { id: string; name: string; phone?: string | null; phones?: string[]; address?: string | null }
 
 export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }: PaymentDialogProps) {
   const { t } = useLanguage()
@@ -30,6 +33,15 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
   const [cashReceivedMMK, setCashReceivedMMK] = React.useState<string>("")
   const [note, setNote] = React.useState<string>("")
   const [receiptEmail, setReceiptEmail] = React.useState<string>("")
+  const [isWholesale, setIsWholesale] = React.useState(false)
+  const [customers, setCustomers] = React.useState<CustomerOption[]>([])
+  const [customerId, setCustomerId] = React.useState("")
+  const [wholesalePaid, setWholesalePaid] = React.useState("")
+  const [wholesalePrices, setWholesalePrices] = React.useState<Record<string, string>>({})
+  const [newCustomerOpen, setNewCustomerOpen] = React.useState(false)
+  const [newCustomerName, setNewCustomerName] = React.useState("")
+  const [newCustomerPhone, setNewCustomerPhone] = React.useState("")
+  const [newCustomerAddress, setNewCustomerAddress] = React.useState("")
   
   // Delivery Fields
   const [isDelivery, setIsDelivery] = React.useState<boolean>(false)
@@ -48,12 +60,24 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
   // Reset state when opening
   React.useEffect(() => {
     if (isOpen) {
+      void fetch("/api/customers")
+        .then((response) => response.ok ? response.json() : [])
+        .then((data) => setCustomers(Array.isArray(data) ? data : []))
+        .catch(() => setCustomers([]))
       setPaymentMethod("CASH")
       setCashReceivedMMK("")
       setSplitCashMMK("")
       setSplitNonCashMMK("")
       setNote("")
       setReceiptEmail("")
+      setIsWholesale(false)
+      setCustomerId("")
+      setWholesalePaid("")
+      setWholesalePrices(Object.fromEntries(items.map((item) => [item.id, String(item.unitPrice)])))
+      setNewCustomerOpen(false)
+      setNewCustomerName("")
+      setNewCustomerPhone("")
+      setNewCustomerAddress("")
       setIsDelivery(false)
       setDeliveryCustomerName("")
       setDeliveryPhone("")
@@ -64,7 +88,11 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
   }, [isOpen])
 
   // Calculate totals
-  const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+  const checkoutItems = isWholesale
+    ? items.map((item) => ({ ...item, unitPrice: Number(wholesalePrices[item.id] || item.unitPrice) }))
+    : items
+  const selectedCustomer = customers.find((customer) => customer.id === customerId)
+  const subtotal = checkoutItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
   const itemsDiscountTotal = items.reduce((sum, item) => sum + (item.discount || 0), 0)
   
   let finalOrderDiscount = 0
@@ -131,7 +159,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
       setError("Please add at least one item before checkout")
       return
     }
-    for (const item of items) {
+    for (const item of checkoutItems) {
       if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
         setError(`Quantity for ${item.product.name} must be a whole number greater than 0`)
         return
@@ -157,7 +185,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
     }
 
     // Minimum Selling Price Enforcement (R2)
-    for (const item of items) {
+    for (const item of checkoutItems) {
       const costPrice = item.selectedVariant?.costPrice ?? 0
       if (costPrice > 0) {
         const effectiveSellingPrice = (item.unitPrice * item.quantity - (item.discount || 0)) / item.quantity
@@ -168,12 +196,21 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
       }
     }
 
-    if (paymentMethod === "CASH" && totalCashReceivedMMK < totalMMK) {
+    const wholesalePayment = parseFloat(wholesalePaid) || 0
+    if (isWholesale && !customerId) {
+      setError("Select a customer for a wholesale / credit sale")
+      return
+    }
+    if (isWholesale && (wholesalePayment < 0 || wholesalePayment > totalMMK)) {
+      setError("Wholesale payment must be between 0 and the sale total")
+      return
+    }
+    if (!isWholesale && paymentMethod === "CASH" && totalCashReceivedMMK < totalMMK) {
       setError("Received cash is less than total amount / လက်ခံရရှိငွေ မလုံလောက်ပါ")
       return
     }
 
-    if (paymentMethod === "SPLIT") {
+    if (!isWholesale && paymentMethod === "SPLIT") {
       const rawCash = parseFloat(splitCashMMK)
       const rawNonCash = parseFloat(splitNonCashMMK)
       if ((!isNaN(rawCash) && rawCash < 0) || (!isNaN(rawNonCash) && rawNonCash < 0)) {
@@ -210,7 +247,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
       currency: "MMK",
       exchangeRate: 1,
       paymentMethod,
-      cashReceived: paymentMethod === "CASH" ? totalCashReceivedMMK : (paymentMethod === "SPLIT" ? splitCash : null),
+      cashReceived: isWholesale ? wholesalePayment : (paymentMethod === "CASH" ? totalCashReceivedMMK : (paymentMethod === "SPLIT" ? splitCash : null)),
       changeGiven: paymentMethod === "CASH" ? changeMMK : null,
       note: note || null,
       receiptEmail: receiptEmail || null,
@@ -218,7 +255,10 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
       deliveryCustomerName: isDelivery ? deliveryCustomerName : null,
       deliveryPhone: isDelivery ? deliveryPhone : null,
       deliveryAddress: isDelivery ? deliveryAddress : null,
-      items,
+      wholesaleSale: isWholesale,
+      wholesalePaid: isWholesale ? wholesalePayment : undefined,
+      customerId: customerId || undefined,
+      items: checkoutItems,
     }
 
     try {
@@ -245,6 +285,36 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
     }
   }
 
+  const handleCreateCustomer = async () => {
+    setError(null)
+    if (!newCustomerName.trim() || !/^09\d{9}$/.test(newCustomerPhone)) {
+      setError("Customer name and a valid 11-digit phone starting with 09 are required")
+      return
+    }
+    try {
+      const response = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newCustomerName.trim(),
+          phones: [newCustomerPhone],
+          address: newCustomerAddress.trim() || undefined,
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || "Could not create customer")
+      const customer = { ...data.customer, phones: [newCustomerPhone] }
+      setCustomers((current) => [customer, ...current])
+      setCustomerId(customer.id)
+      setNewCustomerOpen(false)
+      setNewCustomerName("")
+      setNewCustomerPhone("")
+      setNewCustomerAddress("")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create customer")
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden bg-card border-border">
@@ -264,15 +334,16 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto p-1 flex-1">
+        <div className="grid min-h-0 grid-cols-1 gap-6 overflow-hidden p-1 flex-1 md:grid-cols-2">
           {/* Left side: Payment Methods */}
-          <div className="space-y-4">
+            <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               {t("Select Payment Method", "ပေးချေမည့် နည်းလမ်း")}
             </h3>
 
             {/* Payment buttons grid */}
             <div className="grid grid-cols-2 gap-3">
+              {!isWholesale && <>
               <Button
                 type="button"
                 variant={paymentMethod === "CASH" ? "default" : "outline"}
@@ -324,10 +395,88 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
               >
                 <span className="text-xs">{t("Split Payment", "ခွဲခြားပေးချေမည်")}</span>
               </Button>
+              </>}
             </div>
+            {isWholesale && (
+              <div className="space-y-3 rounded-xl border border-border bg-background p-3">
+                <p className="text-xs font-bold uppercase text-muted-foreground">Wholesale prices</p>
+                <div className="max-h-[320px] space-y-3 overflow-y-auto pr-1">
+                  {items.map((item) => (
+                    <div key={item.id} className="rounded-lg border bg-muted/10 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold">{item.product.name}</p>
+                          <p className="text-xs text-muted-foreground">Variant: {item.selectedVariant?.name || "Standard"}</p>
+                          {item.selectedVariant?.barcode && <p className="text-[11px] text-muted-foreground">Barcode: {item.selectedVariant.barcode}</p>}
+                        </div>
+                        <span className="shrink-0 text-xs font-bold">Qty {item.quantity}</span>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                        <div><p className="text-muted-foreground">Cost price</p><p className="font-semibold">{(item.selectedVariant?.costPrice || 0).toLocaleString()} Ks</p></div>
+                        <div><p className="text-muted-foreground">Catalog price</p><p className="font-semibold">{(item.selectedVariant?.price || item.product.price || 0).toLocaleString()} Ks</p></div>
+                      </div>
+                      <div className="mt-2 grid grid-cols-[1fr_130px] items-center gap-2">
+                        <div>
+                          <p className="text-xs font-semibold">Final sale price / unit</p>
+                          <p className="text-[11px] text-muted-foreground">Line total: {(Number(wholesalePrices[item.id] || item.unitPrice) * item.quantity).toLocaleString()} Ks</p>
+                        </div>
+                        <Input
+                          type="number"
+                          min={item.selectedVariant?.costPrice || 0}
+                          value={wholesalePrices[item.id] || ""}
+                          onChange={(event) => setWholesalePrices((current) => ({ ...current, [item.id]: event.target.value }))}
+                          placeholder="Price / unit"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground">Wholesale price cannot be below cost price.</p>
+              </div>
+            )}
 
             {/* Inputs based on payment method */}
-            {paymentMethod === "CASH" && (
+            {isWholesale && (
+              <div className="space-y-3 rounded-xl border border-border bg-background p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">Wholesale customer</label>
+                  {!customerId && <Button type="button" variant="outline" size="sm" onClick={() => setNewCustomerOpen(true)}>New customer</Button>}
+                </div>
+                {!customerId && <SearchableSelect
+                  items={customers}
+                  value={customerId}
+                  onChange={setCustomerId}
+                  placeholder="Select customer"
+                  searchPlaceholder="Search customer..."
+                  renderItem={(customer) => <span>{customer.name} {customer.phone ? `· ${customer.phone}` : ""}</span>}
+                  filterItem={(customer, search) => `${customer.name} ${customer.phone || ""} ${(customer.phones || []).join(" ")}`.toLowerCase().includes(search)}
+                />}
+                {customerId && (
+                  <div className="flex items-start justify-between gap-3 rounded-lg border bg-muted/20 px-3 py-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="font-semibold">{selectedCustomer?.name || "Customer selected"}</p>
+                      <p className="truncate text-xs text-muted-foreground">{selectedCustomer?.phone || selectedCustomer?.phones?.[0] || "No phone"} · {selectedCustomer?.address || "No address"}</p>
+                    </div>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setCustomerId("")}>Change</Button>
+                  </div>
+                )}
+                {newCustomerOpen && (
+                  <div className="space-y-2 rounded-lg border bg-background p-3">
+                    <Input placeholder="Customer name" value={newCustomerName} onChange={(event) => setNewCustomerName(event.target.value)} />
+                    <PhoneInput placeholder="09xxxxxxxxx" value={newCustomerPhone} onChange={(event) => setNewCustomerPhone(event.target.value)} />
+                    <Input placeholder="Address (optional)" value={newCustomerAddress} onChange={(event) => setNewCustomerAddress(event.target.value)} />
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="ghost" onClick={() => setNewCustomerOpen(false)}>Cancel</Button>
+                      <Button type="button" onClick={() => void handleCreateCustomer()}>Save customer</Button>
+                    </div>
+                  </div>
+                )}
+                <label className="text-xs font-bold uppercase text-muted-foreground">Amount paid now (0 = no pay)</label>
+                <Input type="number" min={0} max={totalMMK} value={wholesalePaid} onChange={(event) => { setWholesalePaid(event.target.value); setPaymentMethod(Number(event.target.value || 0) > 0 ? "CASH" : "DEBT") }} placeholder="0 Ks" />
+                <p className="text-xs text-muted-foreground">The sale completes immediately. Any unpaid balance appears in Outstanding.</p>
+              </div>
+            )}
+            {!isWholesale && paymentMethod === "CASH" && (
               <div className="space-y-3 pt-2">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-muted-foreground uppercase">
@@ -438,7 +587,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
           </div>
 
           {/* Right side: Summary & details */}
-          <div className="space-y-4 border-l border-border pl-0 md:pl-6">
+          <div className="min-h-0 space-y-4 overflow-y-auto border-l border-border pl-0 pr-1 md:pl-6">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               {t("Order Summary", "အရောင်းအကျဉ်းချုပ်")}
             </h3>
@@ -479,6 +628,11 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
 
             {/* Delivery Section (Replaces Email & Notes) */}
             <div className="space-y-3 pt-2">
+              <label className="flex items-center gap-2 rounded-xl border border-border bg-background p-3 text-sm font-bold">
+                <input type="checkbox" checked={isWholesale} onChange={(event) => { setIsWholesale(event.target.checked); setPaymentMethod(event.target.checked ? "DEBT" : "CASH"); setCashReceivedMMK(""); setWholesalePaid(""); setError(null) }} className="h-4 w-4 text-amber-600" />
+                <HandCoins className="h-4 w-4 text-amber-600" />
+                {t("Wholesale / Credit Sale", "လက်ကား / အကြွေးရောင်း")}
+              </label>
               <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-xl border border-border">
                 <input
                   type="checkbox"
@@ -515,8 +669,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
                       <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                       {t("Phone Number *", "ဖုန်းနံပါတ် *")}
                     </label>
-                    <Input
-                      type="tel"
+                    <PhoneInput
                       placeholder="e.g. 09123456789"
                       value={deliveryPhone}
                       onChange={(e) => setDeliveryPhone(e.target.value)}

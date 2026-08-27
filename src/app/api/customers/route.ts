@@ -2,15 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper";
+import { isValidMyanmarPhone, normalizePhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
-
-function normalizePhone(value: unknown): string {
-  let digits = String(value || "").replace(/\D/g, "");
-  if (digits.startsWith("0095")) digits = `0${digits.slice(4)}`;
-  if (digits.startsWith("95")) digits = `0${digits.slice(2)}`;
-  return digits;
-}
 
 function collectPhones(customer: { phone: string | null; phones: unknown }): string[] {
   const values = [customer.phone || "", ...(Array.isArray(customer.phones) ? customer.phones : [])];
@@ -76,6 +70,9 @@ export async function POST(request: Request) {
 
     const requestedPhones = Array.isArray(phones) ? phones : [phone];
     const rawNormalizedPhones = requestedPhones.map(normalizePhone).filter(Boolean);
+    if (rawNormalizedPhones.some((phone) => !isValidMyanmarPhone(phone))) {
+      return NextResponse.json({ error: "Each phone number must be exactly 11 digits and start with 09." }, { status: 400 });
+    }
     const normalizedPhones = Array.from(new Set(rawNormalizedPhones));
     if (normalizedPhones.length === 0) {
       return NextResponse.json({ error: "At least one phone number is required." }, { status: 400 });

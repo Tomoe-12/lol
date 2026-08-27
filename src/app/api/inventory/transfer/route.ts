@@ -107,6 +107,7 @@ export async function POST(request: Request) {
           variantId,
           change: -quantity,
           reason: StockChangeReason.TRANSFER_OUT,
+          performedByStaffId: staff.id,
           note: note || `Transferred ${quantity} units to ${toBranchName}`,
         },
       });
@@ -118,6 +119,7 @@ export async function POST(request: Request) {
           variantId,
           change: quantity,
           reason: StockChangeReason.TRANSFER_IN,
+          performedByStaffId: staff.id,
           note: note || `Transferred ${quantity} units from ${fromBranchName}`,
         },
       });

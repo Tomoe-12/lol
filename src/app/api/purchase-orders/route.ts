@@ -451,6 +451,8 @@ export async function PATCH(request: Request) {
               variantId: variant.id,
               change: item.quantity,
               reason: StockChangeReason.PURCHASE_RECEIVED,
+              performedByStaffId: staff.id,
+              purchaseOrderId: id,
               note: `Received PO #${id}`,
             },
           });

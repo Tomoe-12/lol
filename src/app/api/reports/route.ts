@@ -52,9 +52,11 @@ export async function GET(request: Request) {
       include: {
         salesOrder: {
           include: {
-            branch: { select: { name: true } }
-          }
-        }
+            branch: { select: { name: true } },
+            createdByStaff: { select: { id: true, name: true, role: true } },
+          },
+        },
+        collectedByStaff: { select: { id: true, name: true, role: true } },
       },
       orderBy: { createdAt: "desc" }
     });
@@ -102,7 +104,8 @@ export async function GET(request: Request) {
       },
       include: {
         items: true,
-        branch: { select: { name: true } }
+        branch: { select: { name: true } },
+        fulfillmentTransactions: { select: { id: true } },
       }
     });
 

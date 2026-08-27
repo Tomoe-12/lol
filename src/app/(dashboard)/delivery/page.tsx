@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
 import { Badge } from "@/components/ui/badge"
 import { TablePagination } from "@/components/ui/table-pagination"
 import {
@@ -171,7 +172,9 @@ export default function DeliveryPage() {
         body: JSON.stringify({ salesOrderId: orderId, deliveryStatus: "DELIVERED", ...details }),
       })
       if (res.ok) {
-        fetchDeliveries()
+        setIsWaybillOpen(false)
+        setSelectedWaybill(null)
+        await fetchDeliveries()
       }
     } catch (e) {
       console.error("Failed to update delivery status", e)
@@ -196,6 +199,7 @@ export default function DeliveryPage() {
           <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight flex items-center gap-2.5">
             <Truck className="h-7 w-7 text-primary" />
             {t("Delivery Center", "ပို့ဆောင်ရေးများ")}
+            {stats.pendingCount > 0 && <Badge variant="destructive" className="text-xs">{stats.pendingCount}</Badge>}
           </h1>
           <p className="text-sm text-muted-foreground mt-1 font-medium">
             {t("Track, manage, and confirm customer delivery orders.", "ဝယ်သူများ၏ ပစ္စည်းပို့ဆောင်မှု အမှာစာများကို ကြည့်ရှု၍ အတည်ပြုပေးပါ")}
@@ -502,7 +506,7 @@ export default function DeliveryPage() {
                 <div className="flex items-center justify-between gap-3"><div><p className="font-bold">Delivery service</p><p className="text-xs text-muted-foreground">Record the carrier and tracking reference.</p></div><Badge variant="outline">{selectedWaybill.deliveryFeePayer || "NO FEE"}</Badge></div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <label className="space-y-1 text-xs font-semibold"><span>Service name</span><Input value={serviceName} onChange={(event) => setServiceName(event.target.value)} placeholder="Royal Express" /></label>
-                  <label className="space-y-1 text-xs font-semibold"><span>Service phone</span><Input value={servicePhone} onChange={(event) => setServicePhone(event.target.value)} placeholder="09..." /></label>
+                  <label className="space-y-1 text-xs font-semibold"><span>Service phone</span><PhoneInput value={servicePhone} onChange={(event) => setServicePhone(event.target.value)} placeholder="09xxxxxxxxx" /></label>
                   <label className="space-y-1 text-xs font-semibold"><span>Receipt / tracking no.</span><Input value={receiptNumber} onChange={(event) => setReceiptNumber(event.target.value)} placeholder="Required for express" /></label>
                 </div>
                 <div className="flex flex-wrap gap-x-6 gap-y-1 border-t border-primary/10 pt-3 text-xs"><span><span className="text-muted-foreground">Delivery fee:</span> <strong>{(selectedWaybill.deliveryFee || 0).toLocaleString()} Ks</strong></span><span><span className="text-muted-foreground">Paid by:</span> <strong>{selectedWaybill.deliveryFeePayer || "—"}</strong></span></div>
@@ -561,12 +565,12 @@ export default function DeliveryPage() {
                 <div className="rounded-xl border bg-muted/20 p-3">
                   <p className="mb-2 font-bold uppercase tracking-wider">Deliverer</p>
                   <Input value={delivererName} onChange={(event) => setDelivererName(event.target.value)} placeholder="Name" className="h-8 text-xs text-center" />
-                  <Input value={delivererPhone} onChange={(event) => setDelivererPhone(event.target.value)} placeholder="Phone" className="mt-1 h-8 text-xs text-center" />
+                  <PhoneInput value={delivererPhone} onChange={(event) => setDelivererPhone(event.target.value)} placeholder="09xxxxxxxxx" className="mt-1 h-8 text-xs text-center" />
                 </div>
                 <div className="rounded-xl border bg-muted/20 p-3">
                   <p className="mb-2 font-bold uppercase tracking-wider">Receiver</p>
                   <Input value={receiverName} onChange={(event) => setReceiverName(event.target.value)} placeholder="Name" className="h-8 text-xs text-center" />
-                  <Input value={receiverPhone} onChange={(event) => setReceiverPhone(event.target.value)} placeholder="Phone" className="mt-1 h-8 text-xs text-center" />
+                  <PhoneInput value={receiverPhone} onChange={(event) => setReceiverPhone(event.target.value)} placeholder="09xxxxxxxxx" className="mt-1 h-8 text-xs text-center" />
                 </div>
               </div>
             </div>
@@ -580,7 +584,7 @@ export default function DeliveryPage() {
               <Printer className="h-4 w-4" />
               <span>{t("Print Waybill", "ပြေစာထုတ်မည်")}</span>
             </Button>
-            {selectedWaybill?.deliveryStatus === "PENDING" && <Button type="button" className="font-bold bg-emerald-600 hover:bg-emerald-700" onClick={() => selectedWaybill && handleMarkAsDelivered(selectedWaybill.id, { delivererName, delivererPhone, receiverName, receiverPhone, serviceName, servicePhone, receiptNumber })}>Mark Delivered</Button>}
+            {selectedWaybill?.deliveryStatus === "PENDING" && <Button type="button" disabled={updatingId === selectedWaybill.id} className="font-bold bg-emerald-600 hover:bg-emerald-700" onClick={() => selectedWaybill && handleMarkAsDelivered(selectedWaybill.id, { delivererName, delivererPhone, receiverName, receiverPhone, serviceName, servicePhone, receiptNumber })}>{updatingId === selectedWaybill.id ? "Saving..." : "Mark Delivered"}</Button>}
           </DialogFooter>
         </DialogContent>
       </Dialog>

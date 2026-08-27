@@ -73,6 +73,7 @@ interface Branch {
 
 interface InventoryLog {
   id: string;
+  branch?: { id: string; name: string } | null;
   variantId: string;
   variant: {
     name: string;
@@ -84,6 +85,22 @@ interface InventoryLog {
   reason: string;
   note: string | null;
   createdAt: string;
+  performedBy?: { id: string; name: string; role?: string } | null;
+  transaction?: {
+    id: string;
+    staff?: { id: string; name: string } | null;
+    customer?: { id: string; name: string; phone?: string | null } | null;
+  } | null;
+  salesOrder?: {
+    id: string;
+    createdByStaff?: { id: string; name: string } | null;
+    customer?: { id: string; name: string; phone?: string | null } | null;
+  } | null;
+  purchaseOrder?: {
+    id: string;
+    receivedBy?: { id: string; name: string } | null;
+    supplier?: { id: string; name: string; contact?: string | null } | null;
+  } | null;
 }
 
 interface InventoryLogSource {
@@ -95,8 +112,21 @@ interface InventoryLogSource {
   amountPaid?: number
   supplier?: { name?: string; contact?: string | null; email?: string | null }
   staff?: { name?: string }
+  createdByStaff?: { name?: string } | null
+  receivedBy?: { name?: string } | null
   total?: number
   paymentMethod?: string
+  items?: {
+    quantity?: number
+    fulfilledQuantity?: number
+    unitPrice?: number | null
+    total?: number | null
+    variant?: {
+      name?: string
+      product?: { name?: string }
+    } | null
+    product?: { name?: string } | null
+  }[]
 }
 
 interface InventoryLogDetails {
@@ -378,7 +408,10 @@ export default function InventoryPage() {
       {/* Header section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-foreground">{t("Stock Status", "စတော့ အခြေအနေ")}</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-black text-foreground">
+            {t("Stock Status", "စတော့ အခြေအနေ")}
+            {lowStockCount > 0 && <Badge variant="destructive" className="text-xs">{lowStockCount}</Badge>}
+          </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {t("Real-time stock tracking and inventory management across branches", "ဆိုင်ခွဲများအလိုက် စတော့ အခြေအနေနှင့် လက်ကျန် စီမံခန့်ခွဲမှု")}
           </p>
@@ -712,9 +745,12 @@ export default function InventoryPage() {
               <thead>
                 <tr className="border-b border-border bg-muted/20 text-muted-foreground text-xs uppercase font-bold">
                   <th className="px-5 py-3.5">{t("Date & Time", "အချိန်")}</th>
+                  <th className="px-5 py-3.5">{t("Branch", "ဆိုင်ခွဲ")}</th>
                   <th className="px-5 py-3.5">{t("Product", "ပစ္စည်း")}</th>
                   <th className="px-5 py-3.5 text-center">{t("Change", "အပြောင်းအလဲ")}</th>
                   <th className="px-5 py-3.5">{t("Operation Type", "အမျိုးအစား")}</th>
+                  <th className="px-5 py-3.5">{t("Responsible staff", "တာဝန်ရှိသူ")}</th>
+                  <th className="px-5 py-3.5">{t("Related flow", "ဆက်စပ်လုပ်ငန်းစဉ်")}</th>
                   <th className="px-5 py-3.5">{t("Details", "မှတ်ချက်")}</th>
                   <th className="px-5 py-3.5 text-right">{t("Action", "လုပ်ဆောင်ချက်")}</th>
                 </tr>
@@ -722,7 +758,7 @@ export default function InventoryPage() {
               <tbody className="divide-y divide-border font-medium">
                 {logs.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-muted-foreground italic">
+                    <td colSpan={9} className="px-5 py-12 text-center text-muted-foreground italic">
                       {t("No stock changes logged for this branch yet", "မှတ်တမ်းမရှိသေးပါ။")}
                     </td>
                   </tr>
@@ -733,6 +769,9 @@ export default function InventoryPage() {
                       <tr key={log.id} className="hover:bg-muted/10 transition-colors">
                         <td className="px-5 py-3.5 text-muted-foreground text-xs">
                           {new Date(log.createdAt).toLocaleString()}
+                        </td>
+                        <td className="px-5 py-3.5 font-semibold text-foreground">
+                          {log.branch?.name || "—"}
                         </td>
                         <td className="px-5 py-3.5 font-bold text-foreground">
                           {log.variant?.product?.name} {log.variant?.name ? `- ${log.variant.name}` : ""}
@@ -759,6 +798,28 @@ export default function InventoryPage() {
                           >
                             {getReasonLabel(log.reason)}
                           </Badge>
+                        </td>
+                        <td className="px-5 py-3.5 text-xs">
+                          <span className="font-semibold">
+                            {log.performedBy?.name ||
+                              log.transaction?.staff?.name ||
+                              log.salesOrder?.createdByStaff?.name ||
+                              log.purchaseOrder?.receivedBy?.name ||
+                              "Legacy / system"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-xs">
+                          <span className="font-semibold">
+                            {log.salesOrder
+                              ? "Sales Order · " + (log.salesOrder.customer?.name || "Walk-in customer")
+                              : log.transaction
+                                ? "POS Sale · " + (log.transaction.customer?.name || "Walk-in customer")
+                                : log.purchaseOrder
+                                  ? "Purchase · " + (log.purchaseOrder.supplier?.name || "Supplier")
+                                  : log.reason === "TRANSFER_IN" || log.reason === "TRANSFER_OUT"
+                                    ? "Branch transfer"
+                                    : "Manual adjustment"}
+                          </span>
                         </td>
                         <td className="px-5 py-3.5 text-muted-foreground text-xs">
                           <span className="line-clamp-2">{log.note || "—"}</span>
@@ -790,8 +851,48 @@ export default function InventoryPage() {
             <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold text-muted-foreground">{t("Change", "အပြောင်းအလဲ")}</p><p className={`mt-1 text-xl font-black ${selectedLog.change > 0 ? "text-emerald-600" : "text-destructive"}`}>{selectedLog.change > 0 ? `+${selectedLog.change}` : selectedLog.change}</p></div>
             <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold text-muted-foreground">{t("Operation Type", "အမျိုးအစား")}</p><p className="mt-1 font-bold">{getReasonLabel(selectedLog.reason)}</p></div>
             <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold text-muted-foreground">{t("Date & Time", "အချိန်")}</p><p className="mt-1 font-semibold">{new Date(selectedLog.createdAt).toLocaleString()}</p></div>
-            <div className="rounded-lg bg-muted/40 p-3 sm:col-span-2"><p className="text-xs font-semibold text-muted-foreground">{t("Branch", "ဆိုင်ခွဲ")}</p><p className="mt-1 font-semibold">{selectedLogDetails?.source?.branch?.name || "—"}</p></div>
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 sm:col-span-2"><p className="text-xs font-bold uppercase text-primary">{t("Source Details", "မူရင်းအကြောင်းအရာ အသေးစိတ်")}</p>{selectedLogDetails?.source ? <div className="mt-2 space-y-2"><p><span className="font-semibold">{selectedLogDetails.sourceType.replaceAll("_", " ")}:</span> #{String(selectedLogDetails.source.id || selectedLogDetails.source.orderNumber || "—").slice(-10).toUpperCase()}</p>{selectedLogDetails.sourceType === "SALES_ORDER" && <><p><span className="font-semibold">{t("Customer", "ဝယ်သူ")}:</span> {selectedLogDetails.source.customer?.name || "—"}</p><p><span className="font-semibold">{t("Customer phone", "ဝယ်သူဖုန်း")}:</span> {(selectedLogDetails.source.customer?.phones || [selectedLogDetails.source.customer?.phone || ""]).filter(Boolean).join(", ") || "—"}</p><p><span className="font-semibold">{t("Payment", "ပေးချေမှု")}:</span> {selectedLogDetails.source.paymentStatus || "—"} · {(selectedLogDetails.source.amountPaid || 0).toLocaleString()} Ks</p></>}{selectedLogDetails.sourceType === "PURCHASE_ORDER" && <><p><span className="font-semibold">{t("Supplier", "ပေးသွင်းသူ")}:</span> {selectedLogDetails.source.supplier?.name || "—"}</p><p><span className="font-semibold">{t("Supplier contact", "ပေးသွင်းသူ ဆက်သွယ်ရန်")}:</span> {selectedLogDetails.source.supplier?.contact || selectedLogDetails.source.supplier?.email || "—"}</p><p><span className="font-semibold">{t("Payment", "ပေးချေမှု")}:</span> {selectedLogDetails.source.paymentStatus || "—"} · {(selectedLogDetails.source.amountPaid || 0).toLocaleString()} Ks</p></>}{selectedLogDetails.sourceType === "POS_TRANSACTION" && <><p><span className="font-semibold">{t("Cashier", "ငွေကိုင်")}:</span> {selectedLogDetails.source.staff?.name || "—"}</p><p><span className="font-semibold">{t("Total", "စုစုပေါင်း")}:</span> {(selectedLogDetails.source.total || 0).toLocaleString()} Ks · {selectedLogDetails.source.paymentMethod || "—"}</p></>}{selectedLogDetails.sourceType === "TRANSFER" && <p>{t("This log is one side of a stock transfer. The note identifies the destination or source branch.", "ဤမှတ်တမ်းသည် စတော့လွှဲပြောင်းမှု၏ တစ်ဖက်ဖြစ်ပြီး မှတ်ချက်တွင် သွားမည့်/လာမည့် ဆိုင်ခွဲကို ဖော်ပြထားပါသည်။")}</p>}</div> : <p className="mt-2 text-sm text-muted-foreground">{t("No linked order was found. This may be a manual adjustment or an older log.", "ချိတ်ဆက်ထားသော အမှာစာ မတွေ့ပါ။ လက်ဖြင့်ပြင်ဆင်မှု သို့မဟုတ် အဟောင်းမှတ်တမ်း ဖြစ်နိုင်ပါသည်။")}</p>}</div>
+            <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold text-muted-foreground">{t("Branch", "ဆိုင်ခွဲ")}</p><p className="mt-1 font-semibold">{selectedLog?.branch?.name || selectedLogDetails?.source?.branch?.name || "—"}</p></div>
+            <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs font-semibold text-muted-foreground">{t("Responsible staff", "တာဝန်ရှိသူ")}</p><p className="mt-1 font-semibold">{selectedLog?.performedBy?.name || selectedLogDetails?.source?.staff?.name || selectedLogDetails?.source?.createdByStaff?.name || selectedLogDetails?.source?.receivedBy?.name || "Legacy / system"}</p></div>
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 sm:col-span-2"><p className="text-xs font-bold uppercase text-primary">{t("Source Details", "မူရင်းအကြောင်းအရာ အသေးစိတ်")}</p>{selectedLogDetails?.source ? <div className="mt-2 space-y-2"><p><span className="font-semibold">{selectedLogDetails.sourceType.replaceAll("_", " ")}:</span> #{String(selectedLogDetails.source.id || selectedLogDetails.source.orderNumber || "—").slice(-10).toUpperCase()}</p>{(selectedLogDetails.sourceType === "SALES_ORDER" || selectedLogDetails.sourceType === "POS_TRANSACTION") && <><p><span className="font-semibold">{t("Customer", "ဝယ်သူ")}:</span> {selectedLogDetails.source.customer?.name || "Walk-in customer"}</p><p><span className="font-semibold">{t("Customer phone", "ဝယ်သူဖုန်း")}:</span> {(selectedLogDetails.source.customer?.phones || [selectedLogDetails.source.customer?.phone || ""]).filter(Boolean).join(", ") || "—"}</p></>}{selectedLogDetails.sourceType === "SALES_ORDER" && <p><span className="font-semibold">{t("Payment", "ပေးချေမှု")}:</span> {selectedLogDetails.source.paymentStatus || "—"} · {(selectedLogDetails.source.amountPaid || 0).toLocaleString()} Ks</p>}{selectedLogDetails.sourceType === "PURCHASE_ORDER" && <><p><span className="font-semibold">{t("Supplier", "ပေးသွင်းသူ")}:</span> {selectedLogDetails.source.supplier?.name || "—"}</p><p><span className="font-semibold">{t("Supplier contact", "ပေးသွင်းသူ ဆက်သွယ်ရန်")}:</span> {selectedLogDetails.source.supplier?.contact || selectedLogDetails.source.supplier?.email || "—"}</p><p><span className="font-semibold">{t("Payment", "ပေးချေမှု")}:</span> {selectedLogDetails.source.paymentStatus || "—"} · {(selectedLogDetails.source.amountPaid || 0).toLocaleString()} Ks</p></>}{selectedLogDetails.sourceType === "POS_TRANSACTION" && <><p><span className="font-semibold">{t("Cashier", "ငွေကိုင်")}:</span> {selectedLogDetails.source.staff?.name || "—"}</p><p><span className="font-semibold">{t("Total", "စုစုပေါင်း")}:</span> {(selectedLogDetails.source.total || 0).toLocaleString()} Ks · {selectedLogDetails.source.paymentMethod || "—"}</p></>}{selectedLogDetails.sourceType === "TRANSFER" && <p>{t("This log is one side of a stock transfer. The note identifies the destination or source branch.", "ဤမှတ်တမ်းသည် စတော့လွှဲပြောင်းမှု၏ တစ်ဖက်ဖြစ်ပြီး မှတ်ချက်တွင် သွားမည့်/လာမည့် ဆိုင်ခွဲကို ဖော်ပြထားပါသည်။")}</p>}</div> : <p className="mt-2 text-sm text-muted-foreground">{t("No linked order was found. This may be a manual adjustment or an older log.", "ချိတ်ဆက်ထားသော အမှာစာ မတွေ့ပါ။ လက်ဖြင့်ပြင်ဆင်မှု သို့မဟုတ် အဟောင်းမှတ်တမ်း ဖြစ်နိုင်ပါသည်။")}</p>}</div>
+            {selectedLogDetails?.source?.items && selectedLogDetails.source.items.length > 0 && (
+              <div className="rounded-lg border border-border bg-card p-3 sm:col-span-2">
+                <p className="text-xs font-bold uppercase text-muted-foreground">
+                  {t("Products and quantities", "ပစ္စည်းနှင့် အရေအတွက်")}
+                </p>
+                <div className="mt-2 divide-y divide-border">
+                  {selectedLogDetails.source.items.map((item, index) => (
+                    <div key={index} className="flex flex-wrap items-center justify-between gap-3 py-2">
+                      <div>
+                        <p className="font-semibold">
+                          {item.variant?.product?.name || item.product?.name || "—"}
+                        </p>
+                        {item.variant?.name && (
+                          <p className="text-xs text-muted-foreground">
+                            Variant: {item.variant.name}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right text-xs">
+                        <p className="font-bold">
+                          Qty: {item.quantity ?? 0}
+                          {item.fulfilledQuantity !== undefined
+                            ? " · Fulfilled: " + item.fulfilledQuantity
+                            : ""}
+                        </p>
+                        {(item.unitPrice !== undefined || item.total !== undefined) && (
+                          <p className="text-muted-foreground">
+                            {(item.unitPrice || 0).toLocaleString()} Ks each
+                            {item.total !== undefined
+                              ? " · " + (item.total || 0).toLocaleString() + " Ks"
+                              : ""}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="rounded-lg bg-muted/40 p-3 sm:col-span-2"><p className="text-xs font-semibold text-muted-foreground">{t("Notes / Reference", "မှတ်ချက် / ကိုးကားချက်")}</p><p className="mt-1 whitespace-pre-wrap">{selectedLog.note || t("No note was recorded.", "မှတ်ချက် မရှိပါ။")}</p></div>
           </div>}
           <DialogFooter><Button variant="outline" onClick={() => setSelectedLog(null)}>{t("Close", "ပိတ်ရန်")}</Button></DialogFooter>

@@ -135,6 +135,9 @@ model Staff {
   exchangeRates          ExchangeRate[]
   createdPurchaseOrders  PurchaseOrder[] @relation("POCreatedBy")
   receivedPurchaseOrders PurchaseOrder[] @relation("POReceivedBy")
+  collectedOrderPayments OrderPayment[] @relation("OrderPaymentCollector")
+  createdSalesOrders     SalesOrder[] @relation("SalesOrderCreator")
+  inventoryLogsCreated   InventoryLog[] @relation("InventoryLogPerformer")
 }
 
 // ─── Category ─────────────────────────────────────────────────────────────────
@@ -196,15 +199,23 @@ model StockLevel {
 }
 
 model InventoryLog {
-  id        String            @id @default(cuid())
-  branchId  String
-  branch    Branch            @relation(fields: [branchId], references: [id])
-  variantId String
-  variant   ProductVariant    @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  change    Int
-  reason    StockChangeReason
-  note      String?
-  createdAt DateTime          @default(now())
+  id                 String            @id @default(cuid())
+  branchId           String
+  branch             Branch            @relation(fields: [branchId], references: [id])
+  variantId          String
+  variant            ProductVariant    @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  change             Int
+  reason             StockChangeReason
+  note               String?
+  performedByStaffId String?
+  performedBy        Staff?            @relation("InventoryLogPerformer", fields: [performedByStaffId], references: [id])
+  transactionId      String?
+  transaction        Transaction?      @relation("InventoryLogTransaction", fields: [transactionId], references: [id])
+  salesOrderId       String?
+  salesOrder         SalesOrder?       @relation("InventoryLogSalesOrder", fields: [salesOrderId], references: [id])
+  purchaseOrderId    String?
+  purchaseOrder      PurchaseOrder?    @relation("InventoryLogPurchaseOrder", fields: [purchaseOrderId], references: [id])
+  createdAt          DateTime          @default(now())
 }
 
 // ─── Transaction ──────────────────────────────────────────────────────────────
@@ -215,6 +226,10 @@ model Transaction {
   branch         Branch            @relation(fields: [branchId], references: [id])
   staffId        String
   staff          Staff             @relation(fields: [staffId], references: [id])
+  customerId     String?
+  customer       Customer?         @relation("TransactionCustomer", fields: [customerId], references: [id])
+  salesOrderId   String?
+  salesOrder     SalesOrder?       @relation("SalesOrderFulfillment", fields: [salesOrderId], references: [id])
   subtotal       Float
   discountAmount Float             @default(0)
   total          Float
@@ -231,6 +246,7 @@ model Transaction {
   updatedAt      DateTime          @updatedAt
 
   items TransactionItem[]
+  inventoryLogs InventoryLog[] @relation("InventoryLogTransaction")
 }
 
 model TransactionItem {
@@ -289,6 +305,7 @@ model PurchaseOrder {
   updatedAt      DateTime              @updatedAt
 
   items PurchaseItem[]
+  inventoryLogs InventoryLog[] @relation("InventoryLogPurchaseOrder")
 }
 
 model PurchaseItem {
@@ -354,6 +371,7 @@ model Customer {
   updatedAt   DateTime @updatedAt
 
   salesOrders SalesOrder[]
+  transactions Transaction[] @relation("TransactionCustomer")
 }
 
 model SalesOrder {
@@ -362,6 +380,8 @@ model SalesOrder {
   branch        Branch           @relation(fields: [branchId], references: [id])
   customerId    String?
   customer      Customer?        @relation(fields: [customerId], references: [id])
+  createdByStaffId String?
+  createdByStaff   Staff?         @relation("SalesOrderCreator", fields: [createdByStaffId], references: [id])
   status        SalesOrderStatus @default(CONFIRMED)
   paymentStatus PaymentStatus    @default(PARTIAL)
   depositStatus DepositStatus    @default(NO_PAY)
@@ -395,6 +415,8 @@ model SalesOrder {
 
   items    SalesOrderItem[]
   payments OrderPayment[]
+  fulfillmentTransactions Transaction[] @relation("SalesOrderFulfillment")
+  inventoryLogs InventoryLog[] @relation("InventoryLogSalesOrder")
 }
 
 model SalesOrderItem {
@@ -419,5 +441,7 @@ model OrderPayment {
   amount       Float
   method       PaymentMethod
   note         String?
+  collectedByStaffId String?
+  collectedByStaff   Staff? @relation("OrderPaymentCollector", fields: [collectedByStaffId], references: [id])
   createdAt    DateTime      @default(now())
 }

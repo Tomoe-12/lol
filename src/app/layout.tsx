@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/providers/auth-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
+import { NumberInputGuard } from "@/components/ui/number-input-guard";
 import { LanguageProvider } from "@/providers/language-provider";
 import "./globals.css";
 
@@ -53,6 +54,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
         <AuthProvider>
+          <NumberInputGuard />
           <ThemeProvider
             attribute="class"
             defaultTheme="system"

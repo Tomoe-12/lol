@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
 import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper";
+import { isValidMyanmarPhone, normalizePhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -55,9 +56,11 @@ export async function POST(request: Request) {
     if (!name?.trim()) {
       return NextResponse.json({ error: "Supplier name is required" }, { status: 400 });
     }
+    const normalizedContact = contact ? normalizePhone(contact) : "";
+    if (contact && !isValidMyanmarPhone(normalizedContact)) return NextResponse.json({ error: "Contact phone must be exactly 11 digits and start with 09." }, { status: 400 });
 
     const supplier = await prisma.supplier.create({
-      data: { name: name.trim(), contact, email, address },
+      data: { name: name.trim(), contact: normalizedContact || null, email, address },
     });
     return NextResponse.json({ supplier });
   } catch (error) {
@@ -89,10 +92,12 @@ export async function PUT(request: Request) {
     };
 
     if (!id || !name?.trim()) return NextResponse.json({ error: "Supplier ID and name are required" }, { status: 400 });
+    const normalizedContact = contact ? normalizePhone(contact) : "";
+    if (contact && !isValidMyanmarPhone(normalizedContact)) return NextResponse.json({ error: "Contact phone must be exactly 11 digits and start with 09." }, { status: 400 });
 
     const supplier = await prisma.supplier.update({
       where: { id },
-      data: { name: name.trim(), contact, email, address },
+      data: { name: name.trim(), contact: normalizedContact || null, email, address },
     });
     return NextResponse.json({ supplier });
   } catch (error) {

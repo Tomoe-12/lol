@@ -66,11 +66,10 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, email, password, pin, role, branchId } = body as {
+    const { name, email, password, role, branchId } = body as {
       name: string;
       email: string;
       password?: string;
-      pin?: string;
       role: Role;
       branchId: string;
     };
@@ -114,22 +113,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email is already in use by another staff member" }, { status: 400 });
     }
 
-    // Verify unique PIN if provided
-    if (pin?.trim()) {
-      const existingPin = await prisma.staff.findFirst({
-        where: { pin: pin.trim() },
-      });
-      if (existingPin) {
-        return NextResponse.json({ error: "PIN is already assigned to another staff member" }, { status: 400 });
-      }
-    }
-
     const newStaff = await prisma.staff.create({
       data: {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password: password?.trim() || "123456",
-        pin: pin?.trim() || null,
+        pin: null,
         role,
         branchId,
       },
@@ -162,12 +151,11 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { id, name, email, password, pin, role, branchId } = body as {
+    const { id, name, email, password, role, branchId } = body as {
       id: string;
       name: string;
       email: string;
       password?: string;
-      pin?: string;
       role: Role;
       branchId: string;
     };
@@ -244,26 +232,13 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Email is already in use by another staff member" }, { status: 400 });
     }
 
-    // Check unique PIN if provided
-    if (pin?.trim()) {
-      const existingPin = await prisma.staff.findFirst({
-        where: {
-          pin: pin.trim(),
-          id: { not: id },
-        },
-      });
-      if (existingPin) {
-        return NextResponse.json({ error: "PIN is already assigned to another staff member" }, { status: 400 });
-      }
-    }
-
     const updated = await prisma.staff.update({
       where: { id },
       data: {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         ...(password?.trim() ? { password: password.trim() } : {}),
-        pin: pin?.trim() || null,
+        pin: null,
         role,
         branchId,
       },

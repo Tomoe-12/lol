@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper";
 import { DepositStatus, PaymentMethod, SalesOrderStatus } from "@prisma/client";
+import { CACHE_KEYS, invalidateCache } from "@/lib/redis";
 
 type OrderItemInput = { variantId: string; quantity: number; requestedQuantity?: number; unitPrice?: number; discount?: number };
 const validPaymentMethods = new Set<PaymentMethod>([PaymentMethod.CASH, PaymentMethod.CARD, PaymentMethod.QR]);
@@ -104,11 +105,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           total: finalTotal,
           paymentMethod: body.paymentMethod || existing.paymentMethod || null,
           note: body.note !== undefined ? body.note : existing.note,
-          ...(paymentDifference !== 0 ? { payments: { create: { amount: paymentDifference, method: (body.paymentMethod || existing.paymentMethod || "CASH") as PaymentMethod, note: paymentDifference < 0 ? "Sales Order deposit refund" : "Additional Sales Order deposit" } } } : {}),
+          ...(paymentDifference !== 0 ? { payments: { create: { amount: paymentDifference, method: (body.paymentMethod || existing.paymentMethod || "CASH") as PaymentMethod, collectedByStaffId: staff.id, note: paymentDifference < 0 ? "Sales Order deposit refund" : "Additional Sales Order deposit" } } } : {}),
         },
         include: { customer: true, items: { include: { variant: { include: { product: true } } } }, payments: { orderBy: { createdAt: "asc" } } },
       });
     });
+    await invalidateCache(CACHE_KEYS.dashboardStats(), CACHE_KEYS.dashboardStats(existing.branchId));
     return NextResponse.json({ success: true, order });
   } catch (error) {
     console.error("Update sales order error:", error);

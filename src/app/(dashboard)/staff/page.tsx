@@ -94,7 +94,6 @@ export default function StaffPage() {
 
   // UI state
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [revealedPins, setRevealedPins] = React.useState<Record<string, boolean>>({})
   const [revealedPasswords, setRevealedPasswords] = React.useState<Record<string, boolean>>({})
 
   // Filters — Directory
@@ -111,7 +110,6 @@ export default function StaffPage() {
   const [staffName, setStaffName] = React.useState("")
   const [staffEmail, setStaffEmail] = React.useState("")
   const [staffPassword, setStaffPassword] = React.useState("123456")
-  const [staffPin, setStaffPin] = React.useState("")
   const [staffRole, setStaffRole] = React.useState<Role>("CASHIER")
   const [staffBranchId, setStaffBranchId] = React.useState("")
 
@@ -162,10 +160,6 @@ export default function StaffPage() {
     }
   }, [user?.branchId, userRole])
 
-  const togglePinReveal = (staffId: string) => {
-    setRevealedPins((prev) => ({ ...prev, [staffId]: !prev[staffId] }))
-  }
-
   const togglePasswordReveal = (staffId: string) => {
     setRevealedPasswords((prev) => ({ ...prev, [staffId]: !prev[staffId] }))
   }
@@ -177,7 +171,6 @@ export default function StaffPage() {
       setStaffName(member.name)
       setStaffEmail(member.email)
       setStaffPassword(member.password || "123456")
-      setStaffPin(member.pin ?? "")
       setStaffRole(member.role)
       setStaffBranchId(member.branchId)
     } else {
@@ -185,7 +178,6 @@ export default function StaffPage() {
       setStaffName("")
       setStaffEmail("")
       setStaffPassword("123456")
-      setStaffPin("")
       setStaffRole("CASHIER")
       setStaffBranchId(userRole === "MANAGER" && user?.branchId ? user.branchId : ((user?.branchId || branches[0]?.id) ?? ""))
     }
@@ -202,7 +194,6 @@ export default function StaffPage() {
         name: staffName,
         email: staffEmail,
         password: staffPassword || "123456",
-        pin: staffPin || null,
         role: staffRole,
         branchId: staffBranchId,
       }
@@ -328,7 +319,6 @@ export default function StaffPage() {
             name: selectedStaffForPerms.name,
             email: selectedStaffForPerms.email,
             password: selectedStaffForPerms.password || "123456",
-            pin: selectedStaffForPerms.pin,
             role: selectedStaffForPerms.role,
             branchId: selectedStaffForPerms.branchId,
             permissions: editingPerms,
@@ -576,7 +566,7 @@ export default function StaffPage() {
           <DialogHeader>
             <DialogTitle>{editingStaff ? "Edit Staff Member" : "Add Staff Member"}</DialogTitle>
             <DialogDescription>
-              Set account credentials, login password, branch permissions, and checkout PINs.
+              Set account credentials, login password, branch permissions, and role.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleStaffSubmit} className="space-y-4">
@@ -647,19 +637,6 @@ export default function StaffPage() {
                 )}
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">POS Checkout PIN (4 digits)</label>
-              <Input
-                type="text"
-                pattern="[0-9]{4}"
-                maxLength={4}
-                value={staffPin}
-                onChange={(e) => setStaffPin(e.target.value.replace(/[^0-9]/g, ""))}
-                placeholder="e.g. 1234"
-              />
-              <span className="text-[10px] text-muted-foreground">Required for POS terminal cashier verification.</span>
-            </div>
-
             {error && (
               <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg p-3">
                 <AlertCircle className="h-4 w-4 shrink-0" />

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper";
 import { DepositStatus, PaymentMethod, SalesOrderStatus } from "@prisma/client";
+import { CACHE_KEYS, invalidateCache } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 const validPaymentMethods = new Set<PaymentMethod>([PaymentMethod.CASH, PaymentMethod.CARD, PaymentMethod.QR]);
@@ -62,14 +63,15 @@ export async function POST(request: Request) {
     const depositStatus: DepositStatus = deposit <= 0 ? "NO_PAY" : "PARTIAL";
     const order = await prisma.$transaction(async (tx) => tx.salesOrder.create({
       data: {
-        branchId, customerId, status, paymentStatus: "PARTIAL", depositStatus, amountPaid: deposit,
+        branchId, customerId, createdByStaffId: staff.id, status, paymentStatus: "PARTIAL", depositStatus, amountPaid: deposit,
         paymentMethod: deposit > 0 ? paymentMethod : null, subtotal: 0, discount: 0, total: 0, note,
         deliveryDate: deliveryDate ? new Date(deliveryDate) : null, isDelivery: false,
         items: { create: normalizedItems.map((item) => ({ variantId: item.variantId, requestedQuantity: item.quantity, quantity: item.quantity, fulfilledQuantity: 0, unitPrice: null, unitCost: null, total: null })) },
-        ...(deposit > 0 ? { payments: { create: { amount: deposit, method: paymentMethod, note: "Sales Order deposit" } } } : {}),
+        ...(deposit > 0 ? { payments: { create: { amount: deposit, method: paymentMethod, collectedByStaffId: staff.id, note: "Sales Order deposit" } } } : {}),
       },
       include: { customer: true, items: { include: { variant: { include: { product: true } } } }, payments: true },
     }));
+    await invalidateCache(CACHE_KEYS.dashboardStats(), CACHE_KEYS.dashboardStats(branchId));
     return NextResponse.json({ success: true, order });
   } catch (error) {
     console.error("Create sales order error:", error);

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper";
 import { PaymentMethod } from "@prisma/client";
+import { CACHE_KEYS, invalidateCache } from "@/lib/redis";
 
 const validPaymentMethods = new Set<PaymentMethod>([PaymentMethod.CASH, PaymentMethod.CARD, PaymentMethod.QR]);
 
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
           salesOrderId: order.id,
           amount,
           method: paymentMethodEnum,
+          collectedByStaffId: staff.id,
           note: note || "Debt collection payment",
         },
       });
@@ -99,6 +101,7 @@ export async function POST(request: Request) {
       return { payment, updatedOrder };
     });
 
+    await invalidateCache(CACHE_KEYS.dashboardStats(), CACHE_KEYS.dashboardStats(order.branchId));
     return NextResponse.json({
       success: true,
       message: `Successfully collected ${amount.toLocaleString()} Ks debt payment!`,
