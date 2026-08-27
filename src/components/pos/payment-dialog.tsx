@@ -119,6 +119,40 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
   const totalSplitEntered = splitCash + splitNonCash
   const splitRemainingMMK = Math.max(0, totalMMK - totalSplitEntered)
 
+  const checkoutReady = React.useMemo(() => {
+    if (!activeBranchId || items.length === 0) return false
+    const variantIds = checkoutItems.map((item) => item.selectedVariant?.id).filter(Boolean)
+    if (new Set(variantIds).size !== variantIds.length) return false
+
+    const validItems = checkoutItems.every((item) => {
+      if (!item.selectedVariant?.id || !Number.isInteger(item.quantity) || item.quantity <= 0) return false
+      if (!Number.isFinite(item.unitPrice) || item.unitPrice <= 0) return false
+      const stockLevels = item.selectedVariant.stockLevels
+      const availableStock = stockLevels?.find((stock) => stock.branchId === activeBranchId)?.quantity || 0
+      if (isWholesale && (!stockLevels || availableStock < item.quantity)) return false
+      if (!isWholesale && stockLevels && availableStock < item.quantity) return false
+      if (isWholesale) {
+        const catalogPrice = item.selectedVariant.price || item.product.price || 0
+        const costPrice = item.selectedVariant.costPrice || 0
+        const effectiveSellingPrice = (item.unitPrice * item.quantity - (item.discount || 0)) / item.quantity
+        if (item.unitPrice > catalogPrice || effectiveSellingPrice < costPrice) return false
+      }
+      return true
+    })
+    if (!validItems || finalOrderDiscount < 0 || finalOrderDiscount > subtotal || totalDiscount < 0 || totalDiscount > subtotal) return false
+    if (isWholesale) {
+      const wholesalePayment = Number(wholesalePaid)
+      if (!customerId || (wholesalePaid.trim() !== "" && !Number.isFinite(wholesalePayment))) return false
+      if (wholesalePayment < 0 || wholesalePayment > totalMMK) return false
+    } else if (paymentMethod === "CASH" && totalCashReceivedMMK < totalMMK) {
+      return false
+    } else if (paymentMethod === "SPLIT" && (splitCash < 0 || splitNonCash < 0 || totalSplitEntered > totalMMK || Math.abs(totalSplitEntered - totalMMK) > 1)) {
+      return false
+    }
+    if (isDelivery && (!deliveryCustomerName.trim() || !/^09\d{9}$/.test(deliveryPhone) || !deliveryAddress.trim())) return false
+    return true
+  }, [activeBranchId, checkoutItems, customerId, deliveryAddress, deliveryCustomerName, deliveryPhone, finalOrderDiscount, isDelivery, isWholesale, items.length, paymentMethod, splitCash, splitNonCash, subtotal, totalCashReceivedMMK, totalDiscount, totalMMK, totalSplitEntered, wholesalePaid])
+
   const handleSplitCashChange = (value: string) => {
     setSplitCashMMK(value)
     const cashVal = parseFloat(value)
@@ -159,6 +193,11 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
       setError("Please add at least one item before checkout")
       return
     }
+    const variantIds = checkoutItems.map((item) => item.selectedVariant?.id).filter(Boolean)
+    if (new Set(variantIds).size !== variantIds.length) {
+      setError("The same product cannot be added more than once")
+      return
+    }
     for (const item of checkoutItems) {
       if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
         setError(`Quantity for ${item.product.name} must be a whole number greater than 0`)
@@ -173,9 +212,20 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
         return
       }
       const availableStock = item.selectedVariant.stockLevels?.find((stock) => stock.branchId === activeBranchId)?.quantity || 0
-      if (item.selectedVariant.stockLevels && availableStock < item.quantity) {
+      if (isWholesale && (!item.selectedVariant.stockLevels || availableStock < item.quantity)) {
         setError(`Not enough stock for ${item.product.name}. Available: ${availableStock}`)
         return
+      }
+      if (!isWholesale && item.selectedVariant.stockLevels && availableStock < item.quantity) {
+        setError(`Not enough stock for ${item.product.name}. Available: ${availableStock}`)
+        return
+      }
+      if (isWholesale) {
+        const catalogPrice = item.selectedVariant.price || item.product.price || 0
+        if (item.unitPrice > catalogPrice) {
+          setError(`Final sale price for ${item.product.name} cannot be higher than the catalog price (${catalogPrice.toLocaleString()} Ks)`)
+          return
+        }
       }
     }
 
@@ -713,7 +763,8 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
             size="lg"
             className="px-10 font-bold bg-primary text-primary-foreground flex items-center gap-2 rounded-xl"
             onClick={handleCheckout}
-            disabled={loading || items.length === 0}
+            disabled={loading || !checkoutReady}
+            title={!checkoutReady ? "Complete all required fields before checkout" : undefined}
           >
             <Check className="h-5 w-5" />
             <span>{t("Complete Order", "ငွေလက်ခံပြီး")}</span>

@@ -94,6 +94,11 @@ export async function POST(request: Request) {
     if (isWholesaleSale && (!Number.isFinite(wholesalePayment) || wholesalePayment < 0 || wholesalePayment > total)) return NextResponse.json({ error: "Wholesale payment must be between zero and the sale total." }, { status: 400 });
     if (isWholesaleSale && wholesalePayment === 0 && paymentMethod !== "DEBT") return NextResponse.json({ error: "No-pay wholesale sales must use the Credit payment method." }, { status: 400 });
     if (isWholesaleSale && wholesalePayment > 0 && paymentMethod === "DEBT") return NextResponse.json({ error: "Partial wholesale payments must use Cash, Card, or QR." }, { status: 400 });
+    if (isWholesaleSale && (!Number.isFinite(Number(subtotal)) || Number(subtotal) < 0 || !Number.isFinite(Number(total)) || Number(total) < 0)) return NextResponse.json({ error: "Wholesale subtotal and total must be valid amounts." }, { status: 400 });
+    if (isWholesaleSale) {
+      const customer = await prisma.customer.findUnique({ where: { id: customerId }, select: { id: true } });
+      if (!customer) return NextResponse.json({ error: "Customer not found." }, { status: 400 });
+    }
 
     // 1. Discount Validation (R1)
     if (typeof discountAmount !== "number" || discountAmount < 0 || discountAmount > subtotal) {
@@ -114,6 +119,8 @@ export async function POST(request: Request) {
       productName?: string;
       product?: { id?: string; name?: string };
       selectedVariant?: { id?: string; costPrice?: number };
+      catalogPrice?: number;
+      availableStock?: number;
     };
 
     const normalizedItems = await Promise.all(
@@ -123,15 +130,24 @@ export async function POST(request: Request) {
         let costPrice = item.selectedVariant?.costPrice;
         let productName = item.product?.name;
 
-        if (variantId && (!productId || costPrice === undefined || !productName)) {
+        if (variantId && (isWholesaleSale || !productId || costPrice === undefined || !productName)) {
           const variant = await prisma.productVariant.findUnique({
             where: { id: variantId },
-            include: { product: true },
+            include: { product: true, stockLevels: isWholesaleSale ? { where: { branchId }, select: { quantity: true } } : undefined },
           });
           if (variant) {
-            productId = productId || variant.productId;
-            costPrice = costPrice !== undefined ? costPrice : variant.costPrice;
-            productName = productName || variant.product?.name;
+            productId = isWholesaleSale ? variant.productId : (productId || variant.productId);
+            costPrice = isWholesaleSale ? variant.costPrice : (costPrice !== undefined ? costPrice : variant.costPrice);
+            productName = isWholesaleSale ? variant.product?.name : (productName || variant.product?.name);
+            return {
+              ...item,
+              productId,
+              variantId,
+              costPrice: costPrice || 0,
+              productName: productName || "Product",
+              catalogPrice: variant.price || variant.product?.price || 0,
+              availableStock: variant.stockLevels?.[0]?.quantity ?? 0,
+            };
           }
         }
 
@@ -155,9 +171,29 @@ export async function POST(request: Request) {
       if (!Number.isFinite(item.unitPrice) || item.unitPrice <= 0) {
         return NextResponse.json({ error: `Selling price for ${item.productName} must be greater than 0` }, { status: 400 });
       }
+      if (isWholesaleSale && item.catalogPrice !== undefined && item.unitPrice > item.catalogPrice) {
+        return NextResponse.json({ error: `Selling price for ${item.productName} cannot be higher than the catalog price (${item.catalogPrice.toLocaleString()} Ks)` }, { status: 400 });
+      }
+      if (isWholesaleSale && item.availableStock !== undefined && item.quantity > item.availableStock) {
+        return NextResponse.json({ error: `Not enough stock for ${item.productName}. Available: ${item.availableStock}` }, { status: 400 });
+      }
       const itemSubtotal = item.unitPrice * item.quantity;
       if (!Number.isFinite(item.discount || 0) || (item.discount || 0) < 0 || (item.discount || 0) > itemSubtotal) {
         return NextResponse.json({ error: `Invalid discount for ${item.productName}` }, { status: 400 });
+      }
+    }
+
+    if (isWholesaleSale) {
+      const variantIds = normalizedItems.map((item) => item.variantId).filter(Boolean);
+      if (new Set(variantIds).size !== variantIds.length) {
+        return NextResponse.json({ error: "The same product cannot be added more than once." }, { status: 400 });
+      }
+      const calculatedSubtotal = normalizedItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+      if (Math.abs(calculatedSubtotal - Number(subtotal)) > 0.01) {
+        return NextResponse.json({ error: "Wholesale subtotal does not match the item quantities and prices." }, { status: 400 });
+      }
+      if (Number(discountAmount) < 0 || Number(discountAmount) > calculatedSubtotal || Math.abs(calculatedSubtotal - Number(discountAmount) - Number(total)) > 0.01) {
+        return NextResponse.json({ error: "Wholesale total or discount does not match the item details." }, { status: 400 });
       }
     }
 
