@@ -76,10 +76,6 @@ export function SalesOrderFulfillmentDialog({
   const [fulfillmentMode, setFulfillmentMode] = React.useState<
     "STORE" | "DELIVERY"
   >("STORE");
-  const [deliveryFee, setDeliveryFee] = React.useState("");
-  const [deliveryFeePayer, setDeliveryFeePayer] = React.useState<
-    "STORE" | "CUSTOMER"
-  >("CUSTOMER");
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const selected = orders.find((order) => order.id === selectedId);
@@ -118,7 +114,7 @@ export function SalesOrderFulfillmentDialog({
       stockShort: quantity > availableStock,
       priceInvalid:
         finalPrice <= 0 ||
-        finalPrice < item.variant.costPrice ||
+        finalPrice <= item.variant.costPrice ||
         finalPrice > referencePrice(item),
     };
   });
@@ -134,6 +130,7 @@ export function SalesOrderFulfillmentDialog({
     selectedItems.length > 0 &&
     !loading &&
     !hasStockShortage &&
+    !lineChecks.some((line) => line.priceInvalid) &&
     exactBalanceCollected,
   );
   const canDeliver = Boolean(
@@ -141,6 +138,7 @@ export function SalesOrderFulfillmentDialog({
     selectedItems.length > 0 &&
     !loading &&
     !hasStockShortage &&
+    !lineChecks.some((line) => line.priceInvalid) &&
     (selected.customer?.address || "").trim(),
   );
 
@@ -169,8 +167,6 @@ export function SalesOrderFulfillmentDialog({
       setQuantities({});
       setPrices({});
       setFulfillmentMode("STORE");
-      setDeliveryFee("");
-      setDeliveryFeePayer("CUSTOMER");
       void loadOrders();
     }
   }, [isOpen, loadOrders]);
@@ -194,8 +190,6 @@ export function SalesOrderFulfillmentDialog({
       ),
     );
     setFulfillmentMode("STORE");
-    setDeliveryFee("");
-    setDeliveryFeePayer("CUSTOMER");
     setError(null);
   };
 
@@ -226,8 +220,6 @@ export function SalesOrderFulfillmentDialog({
           amountCollected: Number(amountCollected || 0),
           paymentMethod,
           fulfillmentMode,
-          deliveryFee: Number(deliveryFee || 0),
-          deliveryFeePayer,
           deliveryAddress: selected.customer?.address || "",
           deliveryPhone:
             selected.customer?.phones?.[0] || selected.customer?.phone || "",
@@ -542,36 +534,6 @@ export function SalesOrderFulfillmentDialog({
                       <option value="CARD">Card</option>
                       <option value="QR">QR</option>
                     </select>
-                    {fulfillmentMode === "DELIVERY" && (
-                      <>
-                        <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          Delivery fee
-                        </label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={deliveryFee}
-                          onChange={(event) =>
-                            setDeliveryFee(event.target.value)
-                          }
-                          placeholder="0 Ks"
-                        />
-                        <select
-                          value={deliveryFeePayer}
-                          onChange={(event) =>
-                            setDeliveryFeePayer(
-                              event.target.value as "STORE" | "CUSTOMER",
-                            )
-                          }
-                          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                        >
-                          <option value="CUSTOMER">
-                            Customer pays delivery fee
-                          </option>
-                          <option value="STORE">Store pays delivery fee</option>
-                        </select>
-                      </>
-                    )}
                   </div>
                 </div>
                 <p className="mt-4 text-xs text-muted-foreground">

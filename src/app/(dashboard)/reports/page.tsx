@@ -123,11 +123,18 @@ export default function ReportsPage() {
 
   // --- Calculations ---
 
+  // POS wholesale/credit checkout already creates the full completed Transaction.
+  // Keep its OrderPayment for receivables, but do not count it as a second inflow.
+  const reportableOrderPayments = useMemo(
+    () => data?.orderPayments.filter((payment) => !String(payment.salesOrder?.note || "").startsWith("POS transaction #")) ?? [],
+    [data],
+  )
+
   // 1. Sales Data & COGS
   const salesSummary = useMemo(() => {
     if (!data) return { totalRevenue: 0, posRevenue: 0, orderRevenue: 0, txCount: 0, totalCOGS: 0, grossProfit: 0 }
     const posRevenue = data.transactions.filter(tx => !tx.salesOrderId).reduce((sum, tx) => sum + tx.total, 0)
-    const orderRevenue = data.orderPayments.reduce((sum, p) => sum + p.amount, 0)
+    const orderRevenue = reportableOrderPayments.reduce((sum, p) => sum + p.amount, 0)
     
     // Calculate COGS
     let posCOGS = 0
@@ -154,11 +161,11 @@ export default function ReportsPage() {
       totalRevenue,
       posRevenue,
       orderRevenue,
-      txCount: data.transactions.length + data.orderPayments.length,
+      txCount: data.transactions.length + reportableOrderPayments.length,
       totalCOGS,
       grossProfit
     }
-  }, [data])
+  }, [data, reportableOrderPayments])
 
   // 2. Product Performance
   const productPerformance = useMemo(() => {
@@ -194,7 +201,7 @@ export default function ReportsPage() {
       staffMap.set(staffName, current)
     })
 
-    data.orderPayments.forEach(p => {
+    reportableOrderPayments.forEach(p => {
       const staffName = p.collectedByStaff?.name || p.salesOrder?.createdByStaff?.name || "Unknown Staff"
       const role = p.collectedByStaff?.role || p.salesOrder?.createdByStaff?.role || "UNKNOWN"
       const current = staffMap.get(staffName) || { name: staffName, role, posRevenue: 0, orderRevenue: 0, txCount: 0 }
@@ -204,7 +211,7 @@ export default function ReportsPage() {
     })
 
     return Array.from(staffMap.values()).sort((a, b) => (b.posRevenue + b.orderRevenue) - (a.posRevenue + a.orderRevenue))
-  }, [data])
+  }, [data, reportableOrderPayments])
 
   // 4. Expenses
   const expenseSummary = useMemo(() => {
@@ -226,13 +233,18 @@ export default function ReportsPage() {
 
   const cashFlowSummary = useMemo(() => {
     if (!data) return { posInflow: 0, salesOrderInflow: 0, totalInflow: 0, expenseOutflow: 0, purchaseOutflow: 0, net: 0 }
-    const posInflow = data.transactions.reduce((sum, tx) => sum + tx.total, 0)
+    const posWholesaleTransactionIds = new Set(
+      data.orderPayments
+        .map(payment => String(payment.salesOrder?.note || "").match(/^POS transaction #([^ —]+)/)?.[1])
+        .filter((id): id is string => Boolean(id)),
+    )
+    const posInflow = data.transactions.filter(tx => !tx.salesOrderId && !posWholesaleTransactionIds.has(tx.id)).reduce((sum, tx) => sum + tx.total, 0)
     const salesOrderInflow = data.orderPayments.reduce((sum, payment) => sum + payment.amount, 0)
     const totalInflow = posInflow + salesOrderInflow
     const expenseOutflow = data.expenses.reduce((sum, expense) => sum + expense.amount, 0)
     const purchaseOutflow = purchaseCashFlowSummary.net
     return { posInflow, salesOrderInflow, totalInflow, expenseOutflow, purchaseOutflow, net: totalInflow - expenseOutflow - purchaseOutflow }
-  }, [data, purchaseCashFlowSummary.net])
+  }, [data, purchaseCashFlowSummary.net, reportableOrderPayments])
 
   // 5. Profit & Loss Time Series
   const pnlData = useMemo(() => {
@@ -257,7 +269,7 @@ export default function ReportsPage() {
       })
     })
 
-    data.orderPayments.forEach(p => {
+    reportableOrderPayments.forEach(p => {
       const day = getDay(p.createdAt)
       day.revenue += p.amount
     })
@@ -281,7 +293,7 @@ export default function ReportsPage() {
     })
 
     return sortedDays
-  }, [data])
+  }, [data, reportableOrderPayments])
 
   // 6. Branch Performance
   const branchPerformance = useMemo(() => {
@@ -305,7 +317,7 @@ export default function ReportsPage() {
       })
     })
 
-    data.orderPayments.forEach(p => {
+    reportableOrderPayments.forEach(p => {
       const b = getBranch(p.salesOrder?.branch?.name)
       b.revenue += p.amount
     })
@@ -328,7 +340,7 @@ export default function ReportsPage() {
       b.profit = b.revenue - b.cogs - b.expenses
     })
     return arr.sort((a, b) => b.profit - a.profit)
-  }, [data, role, selectedBranchId])
+  }, [data, role, selectedBranchId, reportableOrderPayments])
 
   if (role === "CASHIER") {
     return (

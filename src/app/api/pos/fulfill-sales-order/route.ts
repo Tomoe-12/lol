@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthStaff, checkStaffPermission } from "@/lib/auth-helper";
 import { isValidMyanmarPhone, normalizePhone } from "@/lib/phone";
-import { DeliveryFeePayer, ExpenseCategory, PaymentMethod, SalesOrderStatus, StockChangeReason, TransactionStatus } from "@prisma/client";
+import { PaymentMethod, SalesOrderStatus, StockChangeReason, TransactionStatus } from "@prisma/client";
 
 type FulfillmentItem = { variantId: string; quantity: number; unitPrice: number; discount?: number };
 const validPaymentMethods = new Set<PaymentMethod>([PaymentMethod.CASH, PaymentMethod.CARD, PaymentMethod.QR]);
@@ -22,8 +22,6 @@ export async function POST(request: Request) {
       changeGiven?: number;
       note?: string;
       fulfillmentMode?: "STORE" | "DELIVERY";
-      deliveryFee?: number;
-      deliveryFeePayer?: DeliveryFeePayer;
       deliveryAddress?: string;
       deliveryPhone?: string;
     };
@@ -52,9 +50,9 @@ export async function POST(request: Request) {
       if (!Number.isFinite(unitPrice) || unitPrice <= 0) throw new Error(`A final selling price is required for ${variant.product.name}.`);
       if (!Number.isFinite(discount) || discount < 0 || discount > quantity * unitPrice) throw new Error(`Invalid discount for ${variant.product.name}.`);
       const effectivePrice = (quantity * unitPrice - discount) / quantity;
-      if (effectivePrice < variant.costPrice) throw new Error(`Selling price for ${variant.product.name} cannot be lower than cost price.`);
+      if (effectivePrice <= variant.costPrice) throw new Error(`Selling price for ${variant.product.name} must be greater than cost price.`);
       const catalogPrice = variant.price > 0 ? variant.price : variant.product.price;
-      if (catalogPrice <= 0 || effectivePrice >= catalogPrice) throw new Error(`Final sale price for ${variant.product.name} must be below the catalog price.`);
+      if (catalogPrice <= 0 || effectivePrice > catalogPrice) throw new Error(`Final sale price for ${variant.product.name} cannot be higher than the catalog price.`);
       return { ...item, quantity, unitPrice, discount, variant, orderItem, lineTotal: quantity * unitPrice - discount };
     });
 
@@ -64,9 +62,6 @@ export async function POST(request: Request) {
     if (!Number.isFinite(orderDiscount) || orderDiscount < 0 || orderDiscount > subtotal - itemDiscount) return NextResponse.json({ error: "Order discount cannot exceed the fulfillment subtotal." }, { status: 400 });
     const total = subtotal - itemDiscount - orderDiscount;
     const fulfillmentMode = body.fulfillmentMode || "STORE";
-    const deliveryFee = Number(body.deliveryFee || 0);
-    if (!Number.isFinite(deliveryFee) || deliveryFee < 0) return NextResponse.json({ error: "Delivery fee must be zero or greater." }, { status: 400 });
-    if (fulfillmentMode === "DELIVERY" && deliveryFee > 0 && !body.deliveryFeePayer) return NextResponse.json({ error: "Choose who pays the delivery fee." }, { status: 400 });
     if (fulfillmentMode === "DELIVERY" && !(body.deliveryAddress || order.customer?.address)) return NextResponse.json({ error: "A delivery address is required." }, { status: 400 });
     const amountCollected = Number(body.amountCollected || 0);
     if (!Number.isFinite(amountCollected) || amountCollected < 0) return NextResponse.json({ error: "Collected amount must be zero or greater." }, { status: 400 });
@@ -115,18 +110,7 @@ export async function POST(request: Request) {
       const refreshedItems = await tx.salesOrderItem.findMany({ where: { salesOrderId: order.id } });
       const fullyFulfilled = refreshedItems.every((item) => item.fulfilledQuantity >= item.quantity);
       const finalStatus: SalesOrderStatus = fulfillmentMode === "DELIVERY" ? "DELIVERING" : (fullyFulfilled ? "COMPLETED" : "CONFIRMED");
-      const updatedOrder = await tx.salesOrder.update({ where: { id: order.id }, data: { status: finalStatus, subtotal, discount: itemDiscount + orderDiscount, total, amountPaid: totalPaidAfter, paymentStatus: totalPaidAfter >= total ? "PAID" : "PARTIAL", ...(fulfillmentMode === "DELIVERY" ? { isDelivery: true, deliveryStatus: "PENDING", deliveryFee, deliveryFeePayer: body.deliveryFeePayer || null, deliveryCustomerName: order.customer?.name || null, deliveryPhone: normalizePhone(body.deliveryPhone || order.customer?.phone || ""), deliveryAddress: body.deliveryAddress || order.customer?.address || null } : {}) } });
-      if (fulfillmentMode === "DELIVERY" && deliveryFee > 0 && body.deliveryFeePayer === DeliveryFeePayer.STORE) {
-        await tx.expense.create({
-          data: {
-            branchId: order.branchId,
-            category: ExpenseCategory.OTHER,
-            amount: deliveryFee,
-            currency: "MMK",
-            note: `Delivery fee paid by store for Sales Order #${order.id.slice(-6).toUpperCase()}`,
-          },
-        });
-      }
+      const updatedOrder = await tx.salesOrder.update({ where: { id: order.id }, data: { status: finalStatus, subtotal, discount: itemDiscount + orderDiscount, total, amountPaid: totalPaidAfter, paymentStatus: totalPaidAfter >= total ? "PAID" : "PARTIAL", ...(fulfillmentMode === "DELIVERY" ? { isDelivery: true, deliveryStatus: "PENDING", deliveryCustomerName: order.customer?.name || null, deliveryPhone: normalizePhone(body.deliveryPhone || order.customer?.phone || ""), deliveryAddress: body.deliveryAddress || order.customer?.address || null } : {}) } });
       await tx.auditLog.create({ data: { staffId: staff.id, action: "SALES_ORDER_FULFILLED", details: `Fulfilled Sales Order #${order.id.slice(-6).toUpperCase()} through Sales Voucher.` } });
       return { created, updatedOrder };
     });

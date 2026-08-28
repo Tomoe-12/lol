@@ -375,7 +375,7 @@ export default function PurchasesPage() {
           )}
           <Button onClick={openCreate} disabled={loading || createLoading || receiveLoading} className="font-bold gap-2">
             <Plus className="h-4 w-4" />
-            {t("New Purchase Order", "ဝယ်ယူမှု အမှာစာအသစ်")}
+            {t("New Purchase", "ဝယ်ယူမှုအသစ်")}
           </Button>
         </div>
       </div>

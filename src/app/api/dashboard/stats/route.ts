@@ -131,14 +131,14 @@ export async function GET(request: Request) {
               createdAt: { gte: todayStart, lte: todayEnd },
               ...(effectiveBranchId ? { salesOrder: { branchId: effectiveBranchId } } : {}),
             },
-            select: { amount: true, createdAt: true, collectedByStaffId: true, salesOrder: { select: { branchId: true } } }
+            select: { amount: true, createdAt: true, collectedByStaffId: true, salesOrder: { select: { branchId: true, note: true } } }
           }),
           prisma.orderPayment.findMany({
             where: {
               createdAt: { gte: sevenDaysAgo },
               ...(effectiveBranchId ? { salesOrder: { branchId: effectiveBranchId } } : {}),
             },
-            select: { amount: true, createdAt: true, collectedByStaffId: true, salesOrder: { select: { branchId: true } } }
+            select: { amount: true, createdAt: true, collectedByStaffId: true, salesOrder: { select: { branchId: true, note: true } } }
           }),
           prisma.salesOrder.aggregate({
             where: {
@@ -152,20 +152,23 @@ export async function GET(request: Request) {
 
     const cashTransactions = todayTransactions.filter((tx) => !tx.salesOrderId);
     const totalPosRevenueMMK = cashTransactions.reduce((sum, tx) => sum + tx.total, 0);
-    const totalOrderPaymentMMK = todayOrderPayments.reduce((sum, p) => sum + p.amount, 0);
+    const posWholesaleTransactionIds = new Set(
+      todayOrderPayments
+        .map((payment) => String(payment.salesOrder.note || "").match(/^POS transaction #([^ —]+)/)?.[1])
+        .filter((id): id is string => Boolean(id)),
+    );
+    const countedOrderPayments = todayOrderPayments.filter((p) => !String(p.salesOrder.note || "").startsWith("POS transaction #"));
+    const countedWeekOrderPayments = weekOrderPayments.filter((p) => !String(p.salesOrder.note || "").startsWith("POS transaction #"));
+    const totalOrderPaymentMMK = countedOrderPayments.reduce((sum, p) => sum + p.amount, 0);
     const totalRevenueMMK = totalPosRevenueMMK + totalOrderPaymentMMK;
-    const transactionCount = cashTransactions.length + todayOrderPayments.length;
+    // Wholesale transactions store the full sale total; their actual cash is in OrderPayment.
+    const totalCashReceivedMMK = cashTransactions.filter((tx) => !posWholesaleTransactionIds.has(tx.id)).reduce((sum, tx) => sum + tx.total, 0) + todayOrderPayments.reduce((sum, p) => sum + p.amount, 0);
+    const transactionCount = cashTransactions.length + countedOrderPayments.length;
     const lowStockCount = Number(lowStockCountResult[0]?.count ?? 0);
     const pendingReceivables = (pendingReceivablesAgg._sum.total ?? 0) - (pendingReceivablesAgg._sum.amountPaid ?? 0);
 
-    const uniqueStaffToday = new Set([
-      ...cashTransactions.map((tx) => tx.staffId),
-      ...todayOrderPayments.map((payment) => payment.collectedByStaffId).filter(Boolean),
-    ]);
-    const activeStaffCount = uniqueStaffToday.size || totalStaffCount;
-
     const branchTxnMap = new Map<string, { revenue: number; txn: number }>();
-    for (const tx of cashTransactions) {
+    for (const tx of cashTransactions.filter((transaction) => !posWholesaleTransactionIds.has(transaction.id))) {
       const current = branchTxnMap.get(tx.branchId) ?? { revenue: 0, txn: 0 };
       current.revenue += tx.total;
       current.txn += 1;
@@ -215,7 +218,7 @@ export async function GET(request: Request) {
         dailyRevenueMap[dateStr][branchName] += tx.total;
       }
     }
-    for (const p of weekOrderPayments) {
+    for (const p of countedWeekOrderPayments) {
       const dateStr = new Date(p.createdAt).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
@@ -237,7 +240,7 @@ export async function GET(request: Request) {
       txCount: 0,
     }));
 
-    for (const tx of cashTransactions) {
+    for (const tx of cashTransactions.filter((transaction) => !posWholesaleTransactionIds.has(transaction.id))) {
       const hour = new Date(tx.createdAt).getHours();
       hourlyDistributionMap[hour].amount += tx.total;
       hourlyDistributionMap[hour].txCount += 1;
@@ -286,7 +289,7 @@ export async function GET(request: Request) {
       ])
     );
 
-    for (const payment of todayOrderPayments) {
+    for (const payment of countedOrderPayments) {
       if (!payment.collectedByStaffId) continue;
       const current = staffStatsById.get(payment.collectedByStaffId) ?? { txn: 0, revenue: 0 };
       current.txn += 1;
@@ -320,11 +323,12 @@ export async function GET(request: Request) {
           success: true,
           stats: {
             revenueMMK: totalRevenueMMK,
+            cashReceivedMMK: totalCashReceivedMMK,
             salesOrderDepositsMMK: totalOrderPaymentMMK,
             transactionCount,
             lowStockCount,
             pendingReceivables,
-            activeStaffCount: `${activeStaffCount} / ${totalStaffCount}`,
+            staffCount: totalStaffCount,
           },
           branches: branches.map((b) => ({ id: b.id, name: b.name })),
           selectedBranchId: effectiveBranchId || "ALL",

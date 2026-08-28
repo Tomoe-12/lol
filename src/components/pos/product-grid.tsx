@@ -22,10 +22,20 @@ export function ProductGrid({ products, categories, onProductClick }: ProductGri
   const [barcodeQuery, setBarcodeQuery] = React.useState<string>("")
 
   const addItem = useCartStore((state) => state.addItem)
+  const activeBranchId = useCartStore((state) => state.activeBranchId)
+  const cartItems = useCartStore((state) => state.items)
 
   // Filter products by category and search query
   const filteredProducts = React.useMemo(() => {
     return products.filter((product) => {
+      const cartQuantity = cartItems
+        .filter((item) => item.product.id === product.id)
+        .reduce((sum, item) => sum + item.quantity, 0)
+      const branchStock = product.variants.reduce((sum, variant) => {
+        if (activeBranchId) return sum + (variant.stockLevels?.find((stock) => stock.branchId === activeBranchId)?.quantity || 0)
+        return sum + (variant.stockLevels || []).reduce((variantSum, stock) => variantSum + (stock.quantity || 0), 0)
+      }, 0)
+      if (Math.max(0, branchStock - cartQuantity) <= 0) return false
       const matchesCategory =
         selectedCategoryId === "all" || product.categoryId === selectedCategoryId
       const matchesSearch =
@@ -33,7 +43,7 @@ export function ProductGrid({ products, categories, onProductClick }: ProductGri
         (product.variants.some(v => v.barcode && v.barcode.includes(searchQuery)))
       return matchesCategory && matchesSearch
     })
-  }, [products, selectedCategoryId, searchQuery])
+  }, [activeBranchId, cartItems, products, selectedCategoryId, searchQuery])
 
   // Handle barcode search submit
   const handleBarcodeSubmit = (e: React.FormEvent) => {

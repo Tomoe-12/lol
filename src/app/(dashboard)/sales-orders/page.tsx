@@ -463,8 +463,8 @@ export default function SalesOrdersPage() {
         quantity > 0 &&
         price > 0 &&
         catalog > 0 &&
-        price >= (item.variant.costPrice || 0) &&
-        price < catalog &&
+        price > (item.variant.costPrice || 0) &&
+        price <= catalog &&
         stock >= quantity
       );
     }),
@@ -489,8 +489,8 @@ export default function SalesOrdersPage() {
       return (
         !Number.isInteger(quantity) ||
         quantity <= 0 ||
-        price < (item.variant.costPrice || 0) ||
-        price >= catalogPrice(item) ||
+        price <= (item.variant.costPrice || 0) ||
+        price > catalogPrice(item) ||
         catalogPrice(item) <= 0 ||
         (item.variant.stockLevels?.find(
           (stock: { branchId: string; quantity: number }) =>
@@ -1291,8 +1291,8 @@ export default function SalesOrdersPage() {
                   const invalid =
                     price <= 0 ||
                     catalogPrice(item) <= 0 ||
-                    price < (item.variant.costPrice || 0) ||
-                    price >= catalogPrice(item);
+                    price <= (item.variant.costPrice || 0) ||
+                    price > catalogPrice(item);
                   return (
                     <div
                       key={item.id}
@@ -1314,7 +1314,7 @@ export default function SalesOrdersPage() {
                               </strong>
                             </span>
                             <span>
-                              Product catalog:{" "}
+                              Selling Price:{" "}
                               <strong className="text-foreground">
                                 {catalogPrice(item).toLocaleString()} Ks
                               </strong>
@@ -1381,7 +1381,7 @@ export default function SalesOrdersPage() {
                               <Input
                                 type="number"
                                 min={item.variant.costPrice || 0}
-                                max={Math.max(0, catalogPrice(item) - 1)}
+                                max={catalogPrice(item)}
                                 value={confirmPrices[item.id] || ""}
                                 onChange={(event) =>
                                   setConfirmPrices((current) => ({
@@ -1447,8 +1447,7 @@ export default function SalesOrdersPage() {
                           )}
                           {invalid && (
                             <span className="font-bold text-destructive">
-                              Final sale price must be greater than or equal to
-                              cost and below catalog price.
+                              Final sale price must be greater than cost and no more than the catalog price.
                             </span>
                           )}
                         </div>

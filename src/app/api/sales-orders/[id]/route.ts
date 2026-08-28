@@ -49,8 +49,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         if (!Number.isFinite(discount) || discount < 0 || discount > quantity * unitPrice) throw new Error(`Invalid discount for ${variant.product.name}.`);
         const effectivePrice = (quantity * unitPrice - discount) / quantity;
         const catalogPrice = variant.price > 0 ? variant.price : variant.product.price;
-        if (effectivePrice < variant.costPrice) throw new Error(`Agreed price for ${variant.product.name} cannot be below cost price.`);
-        if (catalogPrice <= 0 || effectivePrice >= catalogPrice) throw new Error(`Agreed price for ${variant.product.name} must be below catalog price.`);
+        if (effectivePrice <= variant.costPrice) throw new Error(`Agreed price for ${variant.product.name} must be greater than cost price.`);
+        if (catalogPrice <= 0 || effectivePrice > catalogPrice) throw new Error(`Agreed price for ${variant.product.name} cannot be higher than the catalog price.`);
         const requestedQuantity = Number(item.requestedQuantity ?? existing.items.find((existingItem) => existingItem.variantId === item.variantId)?.requestedQuantity ?? quantity);
         if (!Number.isInteger(requestedQuantity) || requestedQuantity <= 0) throw new Error("Requested quantity must be a whole number greater than zero.");
         return { variantId: item.variantId, requestedQuantity, quantity, unitPrice, unitCost: variant.costPrice, discount, total: quantity * unitPrice - discount };

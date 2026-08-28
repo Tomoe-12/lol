@@ -118,6 +118,8 @@ export default function DeliveryPage() {
   const [serviceName, setServiceName] = useState("")
   const [servicePhone, setServicePhone] = useState("")
   const [receiptNumber, setReceiptNumber] = useState("")
+  const [deliveryFee, setDeliveryFee] = useState("")
+  const [deliveryFeePayer, setDeliveryFeePayer] = useState<"STORE" | "CUSTOMER">("CUSTOMER")
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   // Fetch Branches
@@ -435,6 +437,8 @@ export default function DeliveryPage() {
                               setServiceName(ord.deliveryServiceName || "")
                               setServicePhone(ord.deliveryServicePhone || "")
                               setReceiptNumber(ord.deliveryReceiptNumber || "")
+                              setDeliveryFee(String(ord.deliveryFee || ""))
+                              setDeliveryFeePayer(ord.deliveryFeePayer === "STORE" ? "STORE" : "CUSTOMER")
                               setIsWaybillOpen(true)
                             }}
                           >
@@ -504,12 +508,13 @@ export default function DeliveryPage() {
 
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
                 <div className="flex items-center justify-between gap-3"><div><p className="font-bold">Delivery service</p><p className="text-xs text-muted-foreground">Record the carrier and tracking reference.</p></div><Badge variant="outline">{selectedWaybill.deliveryFeePayer || "NO FEE"}</Badge></div>
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                   <label className="space-y-1 text-xs font-semibold"><span>Service name</span><Input value={serviceName} onChange={(event) => setServiceName(event.target.value)} placeholder="Royal Express" /></label>
                   <label className="space-y-1 text-xs font-semibold"><span>Service phone</span><PhoneInput value={servicePhone} onChange={(event) => setServicePhone(event.target.value)} placeholder="09xxxxxxxxx" /></label>
                   <label className="space-y-1 text-xs font-semibold"><span>Receipt / tracking no.</span><Input value={receiptNumber} onChange={(event) => setReceiptNumber(event.target.value)} placeholder="Required for express" /></label>
+                  <label className="space-y-1 text-xs font-semibold"><span>Delivery fee (MMK)</span><Input type="number" min={0} value={deliveryFee} onChange={(event) => setDeliveryFee(event.target.value)} placeholder="0" /></label>
+                  <label className="space-y-1 text-xs font-semibold"><span>Paid by</span><select value={deliveryFeePayer} onChange={(event) => setDeliveryFeePayer(event.target.value as "STORE" | "CUSTOMER")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="CUSTOMER">Customer pays</option><option value="STORE">Store pays</option></select></label>
                 </div>
-                <div className="flex flex-wrap gap-x-6 gap-y-1 border-t border-primary/10 pt-3 text-xs"><span><span className="text-muted-foreground">Delivery fee:</span> <strong>{(selectedWaybill.deliveryFee || 0).toLocaleString()} Ks</strong></span><span><span className="text-muted-foreground">Paid by:</span> <strong>{selectedWaybill.deliveryFeePayer || "—"}</strong></span></div>
               </div>
 
               {/* Customer Info Card */}
@@ -584,7 +589,7 @@ export default function DeliveryPage() {
               <Printer className="h-4 w-4" />
               <span>{t("Print Waybill", "ပြေစာထုတ်မည်")}</span>
             </Button>
-            {selectedWaybill?.deliveryStatus === "PENDING" && <Button type="button" disabled={updatingId === selectedWaybill.id} className="font-bold bg-emerald-600 hover:bg-emerald-700" onClick={() => selectedWaybill && handleMarkAsDelivered(selectedWaybill.id, { delivererName, delivererPhone, receiverName, receiverPhone, serviceName, servicePhone, receiptNumber })}>{updatingId === selectedWaybill.id ? "Saving..." : "Mark Delivered"}</Button>}
+            {selectedWaybill?.deliveryStatus === "PENDING" && <Button type="button" disabled={updatingId === selectedWaybill.id} className="font-bold bg-emerald-600 hover:bg-emerald-700" onClick={() => selectedWaybill && handleMarkAsDelivered(selectedWaybill.id, { delivererName, delivererPhone, receiverName, receiverPhone, serviceName, servicePhone, receiptNumber, deliveryFee: deliveryFee || "0", deliveryFeePayer })}>{updatingId === selectedWaybill.id ? "Saving..." : "Mark Delivered"}</Button>}
           </DialogFooter>
         </DialogContent>
       </Dialog>

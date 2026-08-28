@@ -21,11 +21,12 @@ import { useLanguage } from "@/providers/language-provider"
 
 interface Stats {
   revenueMMK: number;
+  cashReceivedMMK: number;
   salesOrderDepositsMMK: number;
   transactionCount: number;
   lowStockCount: number;
   pendingReceivables: number;
-  activeStaffCount: string;
+  staffCount: number;
 }
 
 interface BranchPerf {
@@ -82,11 +83,12 @@ export default function DashboardPage() {
   // API Data
   const [stats, setStats] = React.useState<Stats>({
     revenueMMK: 0,
+    cashReceivedMMK: 0,
     salesOrderDepositsMMK: 0,
     transactionCount: 0,
     lowStockCount: 0,
     pendingReceivables: 0,
-    activeStaffCount: "0 / 0",
+    staffCount: 0,
   })
   const [branchPerformance, setBranchPerformance] = React.useState<BranchPerf[]>([])
   const [revenueTrends, setRevenueTrends] = React.useState<RevenueTrendPoint[]>([])
@@ -242,8 +244,8 @@ export default function DashboardPage() {
               <div className={`${kpiSkeleton} h-8 w-40`} />
             ) : (
               <>
-                <div className="text-2xl font-black text-foreground">{stats.revenueMMK.toLocaleString()} Ks</div>
-                <p className="text-xs text-muted-foreground mt-1">Today only ({new Date().toLocaleDateString()}) · Includes {stats.salesOrderDepositsMMK.toLocaleString()} Ks in sales-order deposits</p>
+                <div className="text-2xl font-black text-foreground">{stats.cashReceivedMMK.toLocaleString()} Ks</div>
+                <p className="text-xs text-muted-foreground mt-1">Actual cash received today ({new Date().toLocaleDateString()}) · Sale revenue: {stats.revenueMMK.toLocaleString()} Ks</p>
               </>
             )}
           </CardContent>
@@ -328,7 +330,7 @@ export default function DashboardPage() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardDescription className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {t("Active Staff", "တာဝန်ကျဝန်ထမ်း")}
+                {t("Staff", "ဝန်ထမ်း")}
               </CardDescription>
               <div className="rounded-xl p-2 bg-purple-500/10">
                 <Users className="h-4 w-4 text-purple-500" />
@@ -340,8 +342,8 @@ export default function DashboardPage() {
               <div className={`${kpiSkeleton} h-8 w-20`} />
             ) : (
               <>
-                <div className="text-2xl font-black text-foreground">{stats.activeStaffCount}</div>
-                <p className="text-xs text-muted-foreground mt-1">Cashiers active today</p>
+                <div className="text-2xl font-black text-foreground">{stats.staffCount}</div>
+                <p className="text-xs text-muted-foreground mt-1">Staff in selected branch</p>
               </>
             )}
           </CardContent>

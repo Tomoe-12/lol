@@ -19,7 +19,7 @@ interface PaymentDialogProps {
 }
 
 type PaymentMethodType = "CASH" | "CARD" | "QR" | "SPLIT" | "DEBT"
-type CustomerOption = { id: string; name: string; phone?: string | null; phones?: string[]; address?: string | null }
+type CustomerOption = { id: string; name: string; phone?: string | null; phones?: string[]; email?: string | null; address?: string | null }
 
 export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }: PaymentDialogProps) {
   const { t } = useLanguage()
@@ -41,6 +41,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
   const [newCustomerOpen, setNewCustomerOpen] = React.useState(false)
   const [newCustomerName, setNewCustomerName] = React.useState("")
   const [newCustomerPhone, setNewCustomerPhone] = React.useState("")
+  const [newCustomerEmail, setNewCustomerEmail] = React.useState("")
   const [newCustomerAddress, setNewCustomerAddress] = React.useState("")
   
   // Delivery Fields
@@ -77,6 +78,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
       setNewCustomerOpen(false)
       setNewCustomerName("")
       setNewCustomerPhone("")
+      setNewCustomerEmail("")
       setNewCustomerAddress("")
       setIsDelivery(false)
       setDeliveryCustomerName("")
@@ -92,6 +94,16 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
     ? items.map((item) => ({ ...item, unitPrice: Number(wholesalePrices[item.id] || item.unitPrice) }))
     : items
   const selectedCustomer = customers.find((customer) => customer.id === customerId)
+  const wholesalePriceError = (item: (typeof items)[number]) => {
+    if (!isWholesale) return null
+    const price = Number(wholesalePrices[item.id])
+    const costPrice = item.selectedVariant?.costPrice ?? 0
+    const catalogPrice = item.selectedVariant?.price || item.product.price || 0
+    const effectivePrice = (price * item.quantity - (item.discount || 0)) / item.quantity
+    if (!Number.isFinite(price) || effectivePrice <= costPrice) return `Must be greater than cost (${costPrice.toLocaleString()} Ks)`
+    if (catalogPrice <= 0 || price > catalogPrice) return `Cannot exceed catalog price (${catalogPrice.toLocaleString()} Ks)`
+    return null
+  }
   const subtotal = checkoutItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
   const itemsDiscountTotal = items.reduce((sum, item) => sum + (item.discount || 0), 0)
   
@@ -239,8 +251,8 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
       const costPrice = item.selectedVariant?.costPrice ?? 0
       if (costPrice > 0) {
         const effectiveSellingPrice = (item.unitPrice * item.quantity - (item.discount || 0)) / item.quantity
-        if (effectiveSellingPrice < costPrice) {
-          setError(`Selling price for ${item.product.name} (${effectiveSellingPrice} Ks) cannot be lower than cost price (${costPrice} Ks)`)
+        if (effectiveSellingPrice <= costPrice) {
+          setError(`Selling price for ${item.product.name} (${effectiveSellingPrice} Ks) must be greater than cost price (${costPrice} Ks)`)
           return
         }
       }
@@ -348,6 +360,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
         body: JSON.stringify({
           name: newCustomerName.trim(),
           phones: [newCustomerPhone],
+          email: newCustomerEmail.trim() || undefined,
           address: newCustomerAddress.trim() || undefined,
         }),
       })
@@ -359,6 +372,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
       setNewCustomerOpen(false)
       setNewCustomerName("")
       setNewCustomerPhone("")
+      setNewCustomerEmail("")
       setNewCustomerAddress("")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create customer")
@@ -452,7 +466,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
                 <p className="text-xs font-bold uppercase text-muted-foreground">Wholesale prices</p>
                 <div className="max-h-[320px] space-y-3 overflow-y-auto pr-1">
                   {items.map((item) => (
-                    <div key={item.id} className="rounded-lg border bg-muted/10 p-3">
+                    <div key={item.id} className={`rounded-lg border p-3 ${wholesalePriceError(item) ? "border-destructive/60 bg-destructive/5" : "bg-muted/10"}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-bold">{item.product.name}</p>
@@ -476,12 +490,15 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
                           value={wholesalePrices[item.id] || ""}
                           onChange={(event) => setWholesalePrices((current) => ({ ...current, [item.id]: event.target.value }))}
                           placeholder="Price / unit"
+                          aria-invalid={Boolean(wholesalePriceError(item))}
+                          className={wholesalePriceError(item) ? "border-destructive text-destructive focus-visible:ring-destructive" : ""}
                         />
                       </div>
+                      {wholesalePriceError(item) && <p className="mt-1 text-[11px] font-semibold text-destructive">{wholesalePriceError(item)}</p>}
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-muted-foreground">Wholesale price cannot be below cost price.</p>
+                <p className="text-[11px] text-muted-foreground">Final price must be greater than cost price and less than or equal to catalog price.</p>
               </div>
             )}
 
@@ -505,7 +522,8 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
                   <div className="flex items-start justify-between gap-3 rounded-lg border bg-muted/20 px-3 py-2 text-sm">
                     <div className="min-w-0">
                       <p className="font-semibold">{selectedCustomer?.name || "Customer selected"}</p>
-                      <p className="truncate text-xs text-muted-foreground">{selectedCustomer?.phone || selectedCustomer?.phones?.[0] || "No phone"} · {selectedCustomer?.address || "No address"}</p>
+                      <p className="truncate text-xs text-muted-foreground">{selectedCustomer?.phone || selectedCustomer?.phones?.[0] || "No phone"} · {selectedCustomer?.email || "No email"}</p>
+                      <p className="truncate text-xs text-muted-foreground">{selectedCustomer?.address || "No address"}</p>
                     </div>
                     <Button type="button" variant="ghost" size="sm" onClick={() => setCustomerId("")}>Change</Button>
                   </div>
@@ -514,6 +532,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
                   <div className="space-y-2 rounded-lg border bg-background p-3">
                     <Input placeholder="Customer name" value={newCustomerName} onChange={(event) => setNewCustomerName(event.target.value)} />
                     <PhoneInput placeholder="09xxxxxxxxx" value={newCustomerPhone} onChange={(event) => setNewCustomerPhone(event.target.value)} />
+                    <Input type="email" placeholder="Email (optional)" value={newCustomerEmail} onChange={(event) => setNewCustomerEmail(event.target.value)} />
                     <Input placeholder="Address (optional)" value={newCustomerAddress} onChange={(event) => setNewCustomerAddress(event.target.value)} />
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="ghost" onClick={() => setNewCustomerOpen(false)}>Cancel</Button>
