@@ -196,20 +196,34 @@ export default function InventoryPage() {
   const fetchInventory = async (branchId?: string, options?: { silent?: boolean }) => {
     if (!options?.silent) setLoading(true)
     try {
-      const url = branchId
-        ? `/api/inventory?branchId=${branchId}`
+      let targetBranch = branchId || selectedBranchId
+      const url = targetBranch
+        ? `/api/inventory?branchId=${targetBranch}`
         : "/api/inventory?withStock=true"
 
-      const response = await fetch(url)
-      const data = await response.json()
+      let response = await fetch(url)
+      let data = await response.json()
 
       if (response.ok) {
         if (data.branches) setBranches(data.branches)
-        // Only auto-select branch for MANAGER (their assigned branch), not OWNER
-        // OWNER defaults to "" = All Branches
-        if (data.activeBranchId && role !== "OWNER") {
-          setSelectedBranchId(data.activeBranchId)
+        
+        // Always select an actual branch (default to activeBranchId or first branch in list)
+        if (!targetBranch) {
+          const defaultBranch = data.activeBranchId || (data.branches && data.branches.length > 0 ? data.branches[0].id : "")
+          if (defaultBranch) {
+            setSelectedBranchId(defaultBranch)
+            targetBranch = defaultBranch
+            // Fetch for that specific branch so data is isolated to that branch
+            const branchRes = await fetch(`/api/inventory?branchId=${defaultBranch}`)
+            if (branchRes.ok) {
+              const branchData = await branchRes.json()
+              data = branchData
+            }
+          }
+        } else if (!selectedBranchId) {
+          setSelectedBranchId(targetBranch)
         }
+
         setStockLevels(data.stockLevels ?? [])
         setLogs(data.logs ?? [])
 
@@ -418,18 +432,15 @@ export default function InventoryPage() {
         </div>
 
         {/* Branch Selector */}
-        {role === "OWNER" && (
+        {role === "OWNER" && branches.length > 0 && (
           <div className="flex items-center gap-2 bg-card border border-border px-3 py-1.5 rounded-xl shadow-sm">
             <Building className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="text-xs font-semibold text-muted-foreground uppercase mr-1">{t("Active Branch", "ဆိုင်ခွဲ")}:</span>
             <select
-              value={selectedBranchId}
+              value={selectedBranchId || (branches[0]?.id ?? "")}
               onChange={(e) => handleBranchChange(e.target.value)}
               className="bg-transparent border-0 text-sm font-bold text-foreground focus:ring-0 focus:outline-none cursor-pointer"
             >
-              <option value="" className="bg-card text-foreground font-black text-primary">
-                {t("All Branches", "ဆိုင်ခွဲအားလုံး")}
-              </option>
               {branches.map((b) => (
                 <option key={b.id} value={b.id} className="bg-card text-foreground">
                   {b.name}

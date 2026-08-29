@@ -144,29 +144,15 @@ export function ProductGrid({ products, categories, onProductClick }: ProductGri
 
   return (
     <div className="flex flex-col h-full space-y-4 select-none">
-      {/* Search & Barcode controls */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        {/* Name Search */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t("Search products by name...", "ပစ္စည်းရှာရန်...")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-10 text-sm bg-card border-border text-foreground rounded-lg"
-          />
-        </div>
-
-        {/* Barcode Search Box */}
-        <form onSubmit={handleBarcodeSubmit} className="relative w-full sm:w-60">
-          <Barcode className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t("Scan barcode...", "ဘားကုဒ် ဖတ်ရန်...")}
-            value={barcodeQuery}
-            onChange={(e) => setBarcodeQuery(e.target.value)}
-            className="pl-9 h-10 text-sm bg-card border-border text-foreground rounded-lg font-mono"
-          />
-        </form>
+      {/* Search control */}
+      <div className="relative w-full">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder={t("Search products by name...", "ပစ္စည်းရှာရန်...")}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 h-10 text-sm bg-card border-border text-foreground rounded-lg w-full"
+        />
       </div>
 
       {/* Category filters */}

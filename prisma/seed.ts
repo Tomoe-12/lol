@@ -20,13 +20,45 @@ async function main() {
   await prisma.$executeRawUnsafe(`SET FOREIGN_KEY_CHECKS = 1;`);
   console.log("🧹 Database cleaned successfully.");
 
-  // ─── 4 Branches ─────────────────────────────────────────────────────────────
-  const hledan   = await prisma.branch.create({ data: { name: "Hledan Branch",    address: "Hledan Road, Kamayut Township, Yangon",             receiptHeader: "SUPERMARKET - HLEDAN BRANCH\nThank you for shopping with us!" } });
-  const tamwe    = await prisma.branch.create({ data: { name: "Tamwe Branch",     address: "Tamwe Road, Tamwe Township, Yangon",                receiptHeader: "CONVENIENCE STORE - TAMWE BRANCH\nThank you for shopping with us!" } });
-  const sanchaung = await prisma.branch.create({ data: { name: "Sanchaung Branch", address: "Sanchaung Street, Sanchaung Township, Yangon",      receiptHeader: "SUPERMARKET - SANCHAUNG BRANCH\nThank you for shopping with us!" } });
-  const mandalay = await prisma.branch.create({ data: { name: "Mandalay Branch",  address: "83rd Street, Chan Aye Thar Zan Township, Mandalay", receiptHeader: "HYPERMARKET - MANDALAY BRANCH\nThank you for shopping with us!" } });
-  const allBranches = [hledan, tamwe, sanchaung, mandalay];
-  console.log("✅ 4 Branches created.");
+  // ─── 4 Branches in Taunggyi (Yay Aye Kwin is Main Branch) ───────────────────
+  const yayayekwin = await prisma.branch.create({
+    data: {
+      name: "Yay Aye Kwin Branch",
+      address: "Yay Aye Kwin Main Road, Yay Aye Kwin Quarter, Taunggyi, Shan State",
+      receiptHeader: "SMARTPOS - YAY AYE KWIN BRANCH (MAIN)\nThank you for shopping with us!",
+      isActive: true,
+    }
+  });
+
+  const zaypine = await prisma.branch.create({
+    data: {
+      name: "Zaypine Branch",
+      address: "Bogyoke Aung San Road, Zaypine Quarter, Taunggyi, Shan State",
+      receiptHeader: "SMARTPOS - ZAYPINE BRANCH\nThank you for shopping with us!",
+      isActive: true,
+    }
+  });
+
+  const kanthar = await prisma.branch.create({
+    data: {
+      name: "Kanthar Branch",
+      address: "Circular Lake Road, Kanthar Quarter, Taunggyi, Shan State",
+      receiptHeader: "SMARTPOS - KANTHAR BRANCH\nThank you for shopping with us!",
+      isActive: true,
+    }
+  });
+
+  const pyidaungsu = await prisma.branch.create({
+    data: {
+      name: "Pyidaungsu Branch",
+      address: "Pyidaungsu Road, Pyidaungsu Quarter, Taunggyi, Shan State",
+      receiptHeader: "SMARTPOS - PYIDAUNGSU BRANCH\nThank you for shopping with us!",
+      isActive: true,
+    }
+  });
+
+  const allBranches = [yayayekwin, zaypine, kanthar, pyidaungsu];
+  console.log("✅ 4 Taunggyi Branches created (Yay Aye Kwin as Main).");
 
   // ─── Staff (1 Owner, 4 Managers, 4 Cashiers - 1 Mgr & 1 Cashier per branch) ─
   const owner = await prisma.staff.create({
@@ -37,101 +69,119 @@ async function main() {
       password: "owner123",
       pin: "9999",
       role: Role.OWNER,
-      branchId: hledan.id
+      branchId: yayayekwin.id
     }
   });
 
-  const mgrHledan = await prisma.staff.create({
+  const mgrYayAyeKwin = await prisma.staff.create({
     data: {
-      clerkId: "user_mgr_hl",
+      clerkId: "user_mgr_yak",
       name: "Kyaw Kyaw",
       email: "manager@smartpos.com",
       password: "manager123",
       pin: "2201",
       role: Role.MANAGER,
-      branchId: hledan.id
+      branchId: yayayekwin.id
     }
   });
-  const mgrTamwe = await prisma.staff.create({
+
+  const mgrZaypine = await prisma.staff.create({
     data: {
-      clerkId: "user_mgr_tw",
+      clerkId: "user_mgr_zp",
       name: "Thida Maung",
       email: "manager2@smartpos.com",
       password: "manager123",
       pin: "2202",
       role: Role.MANAGER,
-      branchId: tamwe.id
+      branchId: zaypine.id
     }
   });
-  const mgrSanchaung = await prisma.staff.create({
+
+  const mgrKanthar = await prisma.staff.create({
     data: {
-      clerkId: "user_mgr_sch",
+      clerkId: "user_mgr_kt",
       name: "Myo Min Aung",
       email: "manager3@smartpos.com",
       password: "manager123",
       pin: "2203",
       role: Role.MANAGER,
-      branchId: sanchaung.id
+      branchId: kanthar.id
     }
   });
-  const mgrMandalay = await prisma.staff.create({
+
+  const mgrPyidaungsu = await prisma.staff.create({
     data: {
-      clerkId: "user_mgr_mdl",
+      clerkId: "user_mgr_pds",
       name: "Aye Aye Khin",
       email: "manager4@smartpos.com",
       password: "manager123",
       pin: "2204",
       role: Role.MANAGER,
-      branchId: mandalay.id
+      branchId: pyidaungsu.id
     }
   });
 
-  const cashierHledan = await prisma.staff.create({
+  const cashierYayAyeKwin = await prisma.staff.create({
     data: {
-      clerkId: "user_c_hl",
+      clerkId: "user_c_yak",
       name: "Su Su",
       email: "cashier@smartpos.com",
       password: "cashier123",
       pin: "1101",
       role: Role.CASHIER,
-      branchId: hledan.id
+      branchId: yayayekwin.id
     }
   });
-  const cashierTamwe = await prisma.staff.create({
+
+  const cashierZaypine = await prisma.staff.create({
     data: {
-      clerkId: "user_c_tw",
+      clerkId: "user_c_zp",
       name: "Aung Myo",
       email: "cashier2@smartpos.com",
       password: "cashier123",
       pin: "1201",
       role: Role.CASHIER,
-      branchId: tamwe.id
+      branchId: zaypine.id
     }
   });
-  const cashierSanchaung = await prisma.staff.create({
+
+  const cashierKanthar = await prisma.staff.create({
     data: {
-      clerkId: "user_c_sch",
+      clerkId: "user_c_kt",
       name: "Ei Phyu",
       email: "cashier3@smartpos.com",
       password: "cashier123",
       pin: "1301",
       role: Role.CASHIER,
-      branchId: sanchaung.id
+      branchId: kanthar.id
     }
   });
-  const cashierMandalay = await prisma.staff.create({
+
+  const cashierPyidaungsu = await prisma.staff.create({
     data: {
-      clerkId: "user_c_mdl",
+      clerkId: "user_c_pds",
       name: "Win Htut",
       email: "cashier4@smartpos.com",
       password: "cashier123",
       pin: "1401",
       role: Role.CASHIER,
-      branchId: mandalay.id
+      branchId: pyidaungsu.id
     }
   });
 
   console.log("✅ 9 Staff members created (1 Owner, 4 Managers, 4 Cashiers).");
+
+  // ─── Default Exchange Rates (4500 MMK/USD) for each Branch ─────────────────
+  for (const br of allBranches) {
+    await prisma.exchangeRate.create({
+      data: {
+        branchId: br.id,
+        setByStaffId: owner.id,
+        mmkPerUsd: 4500,
+      }
+    });
+  }
+  console.log("✅ Exchange rates initialized (4,500 MMK/USD) for all 4 branches.");
 
   // ─── Categories ─────────────────────────────────────────────────────────────
   const catNames = ["Beverages", "Alcohol & Spirits", "Snacks & Biscuits", "Personal Care", "Instant Noodles", "Rice & Staples"];
@@ -169,7 +219,7 @@ async function main() {
         imageUrl: p.img,
         categoryId: cat[p.cat],
         variants: {
-          create: [{ name: "Standard", barcode: p.barcode, costPrice: p.cost }]
+          create: [{ name: "Standard", barcode: p.barcode, costPrice: p.cost, price: p.price, lowStockThreshold: 10 }]
         },
       },
       include: { variants: true },
@@ -204,7 +254,7 @@ async function main() {
       name: "Daw Aye Aye",
       phone: "09420000001",
       email: "ayeaye@gmail.com",
-      address: "No. 12, Pyay Road, Kamayut Township, Yangon",
+      address: "No. 12, Circular Lake Road, Kanthar Quarter, Taunggyi",
       creditLimit: 500000,
     }
   });
@@ -214,7 +264,7 @@ async function main() {
       name: "U Kyaw Swar",
       phone: "09420000002",
       email: "kyawswar@gmail.com",
-      address: "No. 45, Hledan Street, Kamayut Township, Yangon",
+      address: "No. 45, Bogyoke Road, Zaypine Quarter, Taunggyi",
       creditLimit: 1000000,
     }
   });
@@ -223,35 +273,35 @@ async function main() {
   // ─── 2 Suppliers ─────────────────────────────────────────────────────────────
   await prisma.supplier.create({
     data: {
-      name: "City Mart Wholesale",
+      name: "Taunggyi Wholesale Center",
       contact: "+959 421 000 001",
-      email: "citymart@supplier.com",
-      address: "Industrial Zone, Hlaing Tharyar, Yangon",
+      email: "wholesale@supplier.com",
+      address: "Industrial Zone, Ayetharyar, Taunggyi",
     }
   });
 
   await prisma.supplier.create({
     data: {
-      name: "Coca-Cola Pinya Bottles",
+      name: "Coca-Cola Pinya Bottles (Shan State)",
       contact: "+959 421 000 002",
       email: "cocacola@supplier.com",
-      address: "Mingaladon Township, Yangon",
+      address: "Main Highway Road, Ayetharyar, Taunggyi",
     }
   });
   console.log("✅ 2 Suppliers created.");
 
-  // ─── 2 All Transactions ─────────────────────────────────────────────────────
+  // ─── 2 Sample Transactions ──────────────────────────────────────────────────
   const cocaVar = createdVariants.find(v => v.productName === "Coca-Cola Classic")!;
   const chipsVar = createdVariants.find(v => v.productName === "Lay's Potato Chips")!;
   const waterVar = createdVariants.find(v => v.productName === "Mineral Water 1L")!;
   const coffeeVar = createdVariants.find(v => v.productName === "Sunday Coffee")!;
 
-  // Transaction 1: Hledan Branch (Cashier Su Su)
+  // Transaction 1: Yay Aye Kwin Main Branch (Cashier Su Su)
   const tx1Subtotal = (cocaVar.price * 3) + (chipsVar.price * 2); // 3600 + 3600 = 7200
   await prisma.transaction.create({
     data: {
-      branchId: hledan.id,
-      staffId: cashierHledan.id,
+      branchId: yayayekwin.id,
+      staffId: cashierYayAyeKwin.id,
       subtotal: tx1Subtotal,
       discountAmount: 0,
       total: tx1Subtotal,
@@ -272,12 +322,12 @@ async function main() {
     }
   });
 
-  // Transaction 2: Tamwe Branch (Cashier Aung Myo)
+  // Transaction 2: Zaypine Branch (Cashier Aung Myo)
   const tx2Subtotal = (waterVar.price * 4) + (coffeeVar.price * 2); // 3200 + 5000 = 8200
   await prisma.transaction.create({
     data: {
-      branchId: tamwe.id,
-      staffId: cashierTamwe.id,
+      branchId: zaypine.id,
+      staffId: cashierZaypine.id,
       subtotal: tx2Subtotal,
       discountAmount: 0,
       total: tx2Subtotal,

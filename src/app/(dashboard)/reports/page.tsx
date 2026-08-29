@@ -124,7 +124,6 @@ export default function ReportsPage() {
   // --- Calculations ---
 
   // POS wholesale/credit checkout already creates the full completed Transaction.
-  // Keep its OrderPayment for receivables, but do not count it as a second inflow.
   const reportableOrderPayments = useMemo(
     () => data?.orderPayments.filter((payment) => !String(payment.salesOrder?.note || "").startsWith("POS transaction #")) ?? [],
     [data],
@@ -133,12 +132,13 @@ export default function ReportsPage() {
   // 1. Sales Data & COGS
   const salesSummary = useMemo(() => {
     if (!data) return { totalRevenue: 0, posRevenue: 0, orderRevenue: 0, txCount: 0, totalCOGS: 0, grossProfit: 0 }
-    const posRevenue = data.transactions.filter(tx => !tx.salesOrderId).reduce((sum, tx) => sum + tx.total, 0)
+    const posTransactions = data.transactions.filter(tx => !tx.salesOrderId)
+    const posRevenue = posTransactions.reduce((sum, tx) => sum + tx.total, 0)
     const orderRevenue = reportableOrderPayments.reduce((sum, p) => sum + p.amount, 0)
     
     // Calculate COGS
     let posCOGS = 0
-    data.transactions.forEach(tx => {
+    posTransactions.forEach(tx => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       tx.items.forEach((item: any) => {
         posCOGS += (item.quantity * (item.unitCost || 0))
@@ -146,12 +146,14 @@ export default function ReportsPage() {
     })
 
     let orderCOGS = 0
-      data.salesOrders.filter(order => !order.fulfillmentTransactions?.length).forEach(order => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      order.items.forEach((item: any) => {
-        orderCOGS += (item.quantity * (item.unitCost || 0))
+    data.salesOrders
+      .filter(order => !order.fulfillmentTransactions?.length && !String(order.note || "").startsWith("POS transaction #"))
+      .forEach(order => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        order.items.forEach((item: any) => {
+          orderCOGS += (item.quantity * (item.unitCost || 0))
+        })
       })
-    })
 
     const totalRevenue = posRevenue + orderRevenue
     const totalCOGS = posCOGS + orderCOGS
@@ -161,7 +163,7 @@ export default function ReportsPage() {
       totalRevenue,
       posRevenue,
       orderRevenue,
-      txCount: data.transactions.length + reportableOrderPayments.length,
+      txCount: posTransactions.length + reportableOrderPayments.length,
       totalCOGS,
       grossProfit
     }
@@ -172,7 +174,7 @@ export default function ReportsPage() {
     if (!data) return []
     const prodMap = new Map<string, { name: string, category: string, qty: number, revenue: number }>()
     
-    data.transactions.forEach(tx => {
+    data.transactions.filter(tx => !tx.salesOrderId).forEach(tx => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       tx.items.forEach((item: any) => {
         const key = `${item.product?.name} - ${item.variant?.name}`
@@ -246,7 +248,7 @@ export default function ReportsPage() {
     return { posInflow, salesOrderInflow, totalInflow, expenseOutflow, purchaseOutflow, net: totalInflow - expenseOutflow - purchaseOutflow }
   }, [data, purchaseCashFlowSummary.net, reportableOrderPayments])
 
-  // 5. Profit & Loss Time Series
+  // 5. Profit & Loss Time Series (Daily Breakdown)
   const pnlData = useMemo(() => {
     if (!data) return []
     
@@ -260,7 +262,8 @@ export default function ReportsPage() {
       return dailyMap.get(day)!
     }
 
-    data.transactions.forEach(tx => {
+    // Direct POS sales transactions
+    data.transactions.filter(tx => !tx.salesOrderId).forEach(tx => {
       const day = getDay(tx.createdAt)
       day.revenue += tx.total
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -269,18 +272,22 @@ export default function ReportsPage() {
       })
     })
 
+    // Sales order payments
     reportableOrderPayments.forEach(p => {
       const day = getDay(p.createdAt)
       day.revenue += p.amount
     })
 
-    data.salesOrders.filter(order => !String(order.note || "").startsWith("POS transaction #")).forEach(order => {
-      const day = getDay(order.createdAt)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      order.items.forEach((item: any) => {
-        day.cogs += (item.quantity * (item.unitCost || 0))
+    // Sales orders COGS
+    data.salesOrders
+      .filter(order => !order.fulfillmentTransactions?.length && !String(order.note || "").startsWith("POS transaction #"))
+      .forEach(order => {
+        const day = getDay(order.createdAt)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        order.items.forEach((item: any) => {
+          day.cogs += (item.quantity * (item.unitCost || 0))
+        })
       })
-    })
 
     data.expenses.forEach(e => {
       const day = getDay(e.createdAt)
@@ -308,7 +315,7 @@ export default function ReportsPage() {
       return bMap.get(name)!
     }
 
-    data.transactions.forEach(tx => {
+    data.transactions.filter(tx => !tx.salesOrderId).forEach(tx => {
       const b = getBranch(tx.branch?.name)
       b.revenue += tx.total
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -322,13 +329,15 @@ export default function ReportsPage() {
       b.revenue += p.amount
     })
 
-    data.salesOrders.filter(order => !String(order.note || "").startsWith("POS transaction #")).forEach(order => {
-      const b = getBranch(order.branch?.name)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      order.items.forEach((item: any) => {
-        b.cogs += (item.quantity * (item.unitCost || 0))
+    data.salesOrders
+      .filter(order => !order.fulfillmentTransactions?.length && !String(order.note || "").startsWith("POS transaction #"))
+      .forEach(order => {
+        const b = getBranch(order.branch?.name)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        order.items.forEach((item: any) => {
+          b.cogs += (item.quantity * (item.unitCost || 0))
+        })
       })
-    })
 
     data.expenses.forEach(e => {
       const b = getBranch(e.branch?.name)
