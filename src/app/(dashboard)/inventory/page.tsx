@@ -12,6 +12,7 @@ import {
   Plus,
   Minus,
   AlertCircle,
+  AlertTriangle,
   History,
   TrendingDown,
   Filter,
@@ -59,10 +60,12 @@ interface StockLevel {
     costPrice?: number;
     price?: number;
     lowStockThreshold: number;
+    highStockThreshold?: number;
     product: Product;
   };
   quantity: number;
   lowStockThreshold: number;
+  highStockThreshold?: number;
 }
 
 interface Branch {
@@ -157,6 +160,7 @@ export default function InventoryPage() {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [selectedCategory, setSelectedCategory] = React.useState("ALL")
   const [filterLowStock, setFilterLowStock] = React.useState(false)
+  const [filterMaxStock, setFilterMaxStock] = React.useState(false)
 
   // Pagination
   const [invPage, setInvPage] = React.useState(1)
@@ -269,14 +273,20 @@ export default function InventoryPage() {
       selectedCategory === "ALL" || s.variant.product.category.name === selectedCategory
       
     const matchesLowStock = !filterLowStock || s.quantity <= s.lowStockThreshold
+    const maxThreshold = s.highStockThreshold ?? s.variant.highStockThreshold ?? 100
+    const matchesMaxStock = !filterMaxStock || (maxThreshold > 0 && s.quantity >= maxThreshold)
 
-    return matchesSearch && matchesCategory && matchesLowStock
+    return matchesSearch && matchesCategory && matchesLowStock && matchesMaxStock
   })
 
   const pagedStock = filteredStock.slice((invPage - 1) * invPageSize, invPage * invPageSize)
 
-  // Count items low in stock
+  // Count items low and high in stock
   const lowStockCount = stockLevels.filter((s) => s.quantity <= s.lowStockThreshold).length
+  const maxStockCount = stockLevels.filter((s) => {
+    const maxThreshold = s.highStockThreshold ?? s.variant.highStockThreshold ?? 100
+    return maxThreshold > 0 && s.quantity >= maxThreshold
+  }).length
 
   // Handlers
   const handleCombinedEditSubmit = async (e: React.FormEvent) => {
@@ -581,7 +591,10 @@ export default function InventoryPage() {
 
               {/* Low Stock Toggle */}
               <button
-                onClick={() => setFilterLowStock(!filterLowStock)}
+                onClick={() => {
+                  setFilterLowStock(!filterLowStock)
+                  if (!filterLowStock) setFilterMaxStock(false)
+                }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${
                   filterLowStock
                     ? "bg-destructive/10 border-destructive text-destructive"
@@ -590,6 +603,32 @@ export default function InventoryPage() {
               >
                 <AlertCircle className="h-3.5 w-3.5" />
                 <span>{t("Low Stock", "နည်းနေမှုများ")}</span>
+                {lowStockCount > 0 && (
+                  <Badge variant="destructive" className="ml-1 text-[10px] py-0 px-1 font-bold">
+                    {lowStockCount}
+                  </Badge>
+                )}
+              </button>
+
+              {/* Max Stock Toggle */}
+              <button
+                onClick={() => {
+                  setFilterMaxStock(!filterMaxStock)
+                  if (!filterMaxStock) setFilterLowStock(false)
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${
+                  filterMaxStock
+                    ? "bg-amber-500/10 border-amber-500 text-amber-600 dark:text-amber-400"
+                    : "bg-muted/10 border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>{t("Max Stock", "အများဆုံးသတိပေး")}</span>
+                {maxStockCount > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-[10px] py-0 px-1 font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                    {maxStockCount}
+                  </Badge>
+                )}
               </button>
             </div>
           </div>
@@ -620,11 +659,13 @@ export default function InventoryPage() {
                   ) : (
                     pagedStock.map((s) => {
                       const isLow = s.quantity <= s.lowStockThreshold
+                      const maxThreshold = s.highStockThreshold ?? s.variant.highStockThreshold ?? 100
+                      const isHigh = !isLow && maxThreshold > 0 && s.quantity >= maxThreshold
                       return (
                         <tr
                           key={s.id}
                           className={`hover:bg-muted/10 transition-colors ${
-                            isLow ? "bg-destructive/5" : ""
+                            isLow ? "bg-destructive/5" : isHigh ? "bg-amber-500/5" : ""
                           }`}
                         >
                           <td className="px-5 py-4">
@@ -646,11 +687,13 @@ export default function InventoryPage() {
                                   className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-card ${
                                     isLow
                                       ? "bg-destructive animate-pulse"
+                                      : isHigh
+                                      ? "bg-amber-500 animate-pulse"
                                       : s.quantity === 0
                                       ? "bg-muted-foreground"
                                       : "bg-emerald-500"
                                   }`}
-                                  title={isLow ? "Low Stock" : s.quantity === 0 ? "Out of Stock" : "In Stock"}
+                                  title={isLow ? "Low Stock" : isHigh ? "Max Stock Alert" : s.quantity === 0 ? "Out of Stock" : "In Stock"}
                                 />
                               </div>
                               <div>
@@ -675,12 +718,12 @@ export default function InventoryPage() {
                             {(s.variant.costPrice || 0).toLocaleString()} Ks
                           </td>
                           <td className="px-5 py-4 text-right font-bold text-foreground">
-                            {(s.variant.product.price || 0).toLocaleString()} Ks
+                            {(s.variant.price || s.variant.product.price || 0).toLocaleString()} Ks
                           </td>
                           <td className="px-5 py-4 text-center">
                             <span
                               className={`text-base font-bold ${
-                                isLow ? "text-destructive" : "text-foreground"
+                                isLow ? "text-destructive" : isHigh ? "text-amber-600 dark:text-amber-400" : "text-foreground"
                               }`}
                             >
                               {s.quantity.toLocaleString()}
@@ -688,6 +731,11 @@ export default function InventoryPage() {
                             {isLow && (
                               <Badge variant="destructive" className="ml-2 text-[10px] py-0 px-1 font-semibold uppercase">
                                 {t("Low", "နည်းနေသည်")}
+                              </Badge>
+                            )}
+                            {isHigh && (
+                              <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1 font-bold uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30">
+                                {t("Max", "အများဆုံး")}
                               </Badge>
                             )}
                           </td>

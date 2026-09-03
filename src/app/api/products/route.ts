@@ -97,8 +97,9 @@ export async function POST(request: Request) {
               name: v.name,
               barcode: v.barcode,
               lowStockThreshold: v.lowStockThreshold ?? 10,
-              costPrice: productCostPrice,
-              price: productPrice,
+              highStockThreshold: v.highStockThreshold ?? 100,
+              costPrice: Number(v.costPrice !== undefined && v.costPrice !== null ? v.costPrice : productCostPrice),
+              price: Number(v.price !== undefined && v.price !== null ? v.price : productPrice),
             }
           });
         }
@@ -202,6 +203,9 @@ export async function PUT(request: Request) {
 
         // Upsert incoming variants
         for (const v of variants) {
+          const variantCost = Number(v.costPrice !== undefined && v.costPrice !== null ? v.costPrice : productCostPrice);
+          const variantPrice = Number(v.price !== undefined && v.price !== null ? v.price : productPrice);
+
           if (v.id) {
             await tx.productVariant.update({
               where: { id: v.id },
@@ -209,8 +213,9 @@ export async function PUT(request: Request) {
                 name: v.name,
                 barcode: v.barcode,
                 lowStockThreshold: v.lowStockThreshold ?? 10,
-                costPrice: productCostPrice,
-                price: productPrice,
+                highStockThreshold: v.highStockThreshold ?? 100,
+                costPrice: variantCost,
+                price: variantPrice,
               },
             });
           } else {
@@ -220,18 +225,13 @@ export async function PUT(request: Request) {
                 name: v.name,
                 barcode: v.barcode,
                 lowStockThreshold: v.lowStockThreshold ?? 10,
-                costPrice: productCostPrice,
-                price: productPrice,
+                highStockThreshold: v.highStockThreshold ?? 100,
+                costPrice: variantCost,
+                price: variantPrice,
               },
             });
           }
         }
-
-        // Product price is shared by every variant.
-        await tx.productVariant.updateMany({
-          where: { productId: id },
-          data: { price: productPrice },
-        });
       }
 
       return tx.product.findUnique({

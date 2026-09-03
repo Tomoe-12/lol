@@ -149,10 +149,9 @@ export default function PurchasesPage() {
     const validItems = formItems.length > 0 && formItems.every((item) => {
       const quantity = Number(item.quantity)
       const unitCost = Number(item.unitCost)
-      const sellingPrice = Number(item.sellingPrice)
-      return Boolean(item.variantId) && Number.isInteger(quantity) && quantity > 0 && Number.isFinite(unitCost) && Number.isFinite(sellingPrice) && unitCost >= 0 && sellingPrice >= 0 && !(unitCost > 0 && sellingPrice > 0 && sellingPrice < unitCost)
+      return Boolean(item.variantId) && Number.isInteger(quantity) && quantity > 0 && Number.isFinite(unitCost) && unitCost >= 0
     })
-    const payment = Number.isFinite(newAmountPaid) && newAmountPaid >= 0 && (newPaymentStatus !== "PARTIAL" || newAmountPaid > 0) && (newPaymentStatus !== "NO_PAY" || newAmountPaid === 0) && (newPaymentStatus === "NO_PAY" || Boolean(newVoucherNumber.trim())) && (newPaymentStatus !== "PAID" || (createCalculations.totalCost > 0 && formItems.every(item => Number(item.unitCost) > 0 && Number(item.sellingPrice) > 0)))
+    const payment = Number.isFinite(newAmountPaid) && newAmountPaid >= 0 && (newPaymentStatus !== "PARTIAL" || newAmountPaid > 0) && (newPaymentStatus !== "NO_PAY" || newAmountPaid === 0) && (newPaymentStatus === "NO_PAY" || Boolean(newVoucherNumber.trim())) && (newPaymentStatus !== "PAID" || (createCalculations.totalCost > 0 && formItems.every(item => Number(item.unitCost) > 0)))
     return Boolean(newSupplierId && (role !== "OWNER" || newBranchId) && validItems && payment && newArrivalDate && newArrivalDate >= todayDate)
   }, [createCalculations.totalCost, formItems, newAmountPaid, newArrivalDate, newBranchId, newPaymentStatus, newSupplierId, newVoucherNumber, role, todayDate])
   React.useEffect(() => {
@@ -175,17 +174,6 @@ export default function PurchasesPage() {
   const editPaidSoFar = editOrder?.amountPaid || 0
   const editRemainingAmount = Math.max(0, editTotalCost - editPaidSoFar)
   React.useEffect(() => {
-    const paidTotal = editPaidSoFar + additionalPayment
-    if (editPaymentStatus === "PAID" && editTotalCost > paidTotal) {
-      setEditPaymentStatus("PARTIAL")
-      return
-    }
-    if (editPaymentStatus === "PARTIAL" && editTotalCost > 0 && paidTotal >= editTotalCost) {
-      setEditPaymentStatus("PAID")
-      setAdditionalPayment(Math.max(0, editTotalCost - editPaidSoFar))
-    }
-  }, [additionalPayment, editPaidSoFar, editPaymentStatus, editTotalCost])
-  React.useEffect(() => {
     setReceiveRefundAmount(receiveCalculations.overpayment)
   }, [receiveCalculations.overpayment])
   const canReceive = React.useMemo(() => {
@@ -199,9 +187,12 @@ export default function PurchasesPage() {
       item.sellingPrice >= item.unitCost
     )
     const validRefund = Number.isFinite(receiveRefundAmount) && receiveRefundAmount >= 0 && receiveRefundAmount <= receiveCalculations.overpayment
-    const fullyPaid = receiveCalculations.totalPayment >= receiveCalculations.actualTotalCost
+    const fullyPaidEntered = editPaymentStatus === "PAID" 
+      ? (editRemainingAmount <= 0 || additionalPayment >= editRemainingAmount)
+      : true
+    const fullyPaid = fullyPaidEntered && receiveCalculations.totalPayment >= receiveCalculations.actualTotalCost
     return Boolean(selectedOrder && !receiveLoading && validItems && fullyPaid && editArrivalDate && editArrivalDate >= todayDate && editVoucherNumber.trim() && validRefund)
-  }, [editArrivalDate, editVoucherNumber, receiveCalculations.actualTotalCost, receiveCalculations.overpayment, receiveCalculations.totalPayment, receiveItems, receiveLoading, receiveRefundAmount, selectedOrder, todayDate])
+  }, [additionalPayment, editArrivalDate, editPaymentStatus, editRemainingAmount, editVoucherNumber, receiveCalculations.actualTotalCost, receiveCalculations.overpayment, receiveCalculations.totalPayment, receiveItems, receiveLoading, receiveRefundAmount, selectedOrder, todayDate])
   const canSaveEdit = React.useMemo(() => {
     const validItems = editItems.length > 0 && editItems.every((item) => Number.isInteger(item.quantity) && item.quantity > 0 && Number.isFinite(item.unitCost) && Number.isFinite(item.sellingPrice) && item.unitCost >= 0 && item.sellingPrice >= 0 && !(item.unitCost > 0 && item.sellingPrice > 0 && item.sellingPrice < item.unitCost))
     const totalPayment = editPaidSoFar + additionalPayment
@@ -298,11 +289,10 @@ export default function PurchasesPage() {
       const hasInvalidItem = formItems.some((item) => {
         const quantity = Number(item.quantity)
         const unitCost = Number(item.unitCost)
-        const sellingPrice = Number(item.sellingPrice)
-        return !item.variantId || !Number.isInteger(quantity) || quantity <= 0 || !Number.isFinite(unitCost) || !Number.isFinite(sellingPrice) || unitCost < 0 || sellingPrice < 0 || (unitCost > 0 && sellingPrice > 0 && sellingPrice < unitCost)
+        return !item.variantId || !Number.isInteger(quantity) || quantity <= 0 || !Number.isFinite(unitCost) || unitCost < 0
       })
       if (hasInvalidItem) {
-        setError(t("Select a product, enter a quantity greater than 0, use non-negative prices, and make selling price at least the cost price.", "ပစ္စည်းရွေးပြီး အရေအတွက်ကို ၀ ထက်ကြီးအောင်ထည့်ပါ။ ဈေးနှုန်းကို အနုတ်မထည့်ဘဲ ရောင်းဈေးကို မူရင်းဈေးထက် မနည်းအောင်ထည့်ပါ။"))
+        setError(t("Select a product, enter a quantity greater than 0, and use non-negative cost.", "ပစ္စည်းရွေးပြီး အရေအတွက်ကို ၀ ထက်ကြီးအောင်ထည့်ပါ။ မူရင်းဈေးကို အနုတ်မထည့်ပါနှင့်။"))
         return
       }
       if (!Number.isFinite(newAmountPaid) || newAmountPaid < 0) {
@@ -317,8 +307,8 @@ export default function PurchasesPage() {
         setError(t("No Pay orders cannot have a paid amount.", "မပေးချေရသေးသော အမှာစာတွင် ပေးချေငွေ မထည့်ရပါ။"))
         return
       }
-      if (newPaymentStatus === "PAID" && formItems.some((item) => Number(item.unitCost) <= 0 || Number(item.sellingPrice) <= 0)) {
-        setError(t("Fully Paid orders require cost price and selling price.", "အပြည့်ပေးချေသည့် အမှာစာအတွက် မူရင်းဈေးနှင့် ရောင်းဈေး လိုအပ်ပါသည်။"))
+      if (newPaymentStatus === "PAID" && formItems.some((item) => Number(item.unitCost) <= 0)) {
+        setError(t("Fully Paid orders require cost price.", "အပြည့်ပေးချေသည့် အမှာစာအတွက် မူရင်းဈေး လိုအပ်ပါသည်။"))
         return
       }
       if (newPaymentStatus !== "NO_PAY" && !newVoucherNumber.trim()) {
@@ -336,12 +326,19 @@ export default function PurchasesPage() {
 
     const validItems = formItems
       .filter(i => i.variantId)
-      .map(i => ({
-        variantId: i.variantId,
-        quantity: Number(i.quantity) || 0,
-        unitCost: Number(i.unitCost) || 0,
-        sellingPrice: Number(i.sellingPrice) || 0
-      }))
+      .map(i => {
+        const unitCost = Number(i.unitCost) || 0
+        const found = allVariants.find(v => v.id === i.variantId)
+        const defaultSell = found?.productPrice || found?.price || (unitCost > 0 ? Math.round(unitCost * 1.2) : 100)
+        const rawSell = Number(i.sellingPrice) || 0
+        const sellingPrice = rawSell > 0 ? Math.max(rawSell, unitCost) : Math.max(defaultSell, unitCost)
+        return {
+          variantId: i.variantId,
+          quantity: Number(i.quantity) || 0,
+          unitCost,
+          sellingPrice
+        }
+      })
     if (validItems.length === 0) return
 
     setCreateLoading(true)
@@ -458,6 +455,15 @@ export default function PurchasesPage() {
     setEditItems(prev => prev.map(item => item.id === id ? { ...item, [field]: numericValue } : item))
   }
 
+  const applyMarkupToReceive = (id: string, percent: number) => {
+    const target = receiveItems.find(i => i.id === id)
+    if (!target) return
+    const cost = Number(target.unitCost) || 0
+    if (cost <= 0) return
+    const calculated = Math.round(cost * (1 + percent / 100))
+    updateReceiveItem(id, "sellingPrice", String(calculated))
+  }
+
   const handleReceive = async () => {
     if (!selectedOrder) return
     if (receiveItems.some(item => !Number.isInteger(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.unitCost) || !Number.isFinite(item.sellingPrice) || item.unitCost <= 0 || item.sellingPrice <= 0 || item.sellingPrice < item.unitCost)) {
@@ -476,6 +482,10 @@ export default function PurchasesPage() {
     const advancePaid = selectedOrder.amountPaid || 0
     const totalPaymentAtReceive = advancePaid + additionalPayment
     const overpayment = Math.max(0, totalPaymentAtReceive - actualTotalCost)
+    if (editPaymentStatus === "PAID" && editRemainingAmount > 0 && additionalPayment < editRemainingAmount) {
+      setError(t(`Please enter the remaining amount of ${(editRemainingAmount - additionalPayment).toLocaleString()} Ks to complete full payment.`, `အပြည့်ပေးချေရန် ကျန်ငွေ ${(editRemainingAmount - additionalPayment).toLocaleString()} Ks အားလုံး ထည့်သွင်းပေးရပါမည်။`))
+      return
+    }
     if (totalPaymentAtReceive < actualTotalCost) {
       setError(t(`Additional payment of ${(actualTotalCost - totalPaymentAtReceive).toLocaleString()} Ks is required before receiving.`, `ပစ္စည်းလက်ခံရန် ${(actualTotalCost - totalPaymentAtReceive).toLocaleString()} Ks ထပ်မံပေးချေရပါမည်။`))
       return
@@ -798,7 +808,8 @@ export default function PurchasesPage() {
               <div className="hidden sm:flex gap-2 items-end px-2 pb-1 text-[10px] font-bold uppercase text-muted-foreground mt-4">
                 <div className="flex-1">{t("Product Variant", "ပစ္စည်းအမျိုးအစား")}</div>
                 <div className="w-20 text-center">{t("Qty", "အရေအတွက်")}</div>
-                <><div className="w-24 text-center">{t("Cost", "မူရင်းဈေး")} {newPaymentStatus !== "PAID" && <span className="font-normal">({t("Optional", "စိတ်ကြိုက်")})</span>}</div><div className="w-28 text-center">{t("Sell Price", "ရောင်းဈေး")} {newPaymentStatus !== "PAID" && <span className="font-normal">({t("Optional", "စိတ်ကြိုက်")})</span>}</div></>
+                <div className="w-28 text-center">{t("Cost", "မူရင်းဈေး")} 
+                  {newPaymentStatus !== "PAID" && <span className="font-normal">({t("Optional", "စိတ်ကြိုက်")})</span>}</div>
                 <div className="w-8"></div>
               </div>
               {formItems.map((item, index) => (
@@ -814,7 +825,7 @@ export default function PurchasesPage() {
                           if (found.costPrice !== undefined && found.costPrice > 0) {
                             updateFormItem(index, "unitCost", found.costPrice)
                           }
-                          const sell = found.productPrice || found.price || 0
+                          const sell = found.productPrice || found.price || (found.costPrice ? Math.round(found.costPrice * 1.2) : 100)
                           if (sell > 0) {
                             updateFormItem(index, "sellingPrice", sell)
                           }
@@ -833,14 +844,23 @@ export default function PurchasesPage() {
                       className="h-9 text-xs" title="Quantity"
                     />
                   </div>
-                  <>
-                    <div className="w-full sm:w-24">
-                      <Input type="number" min={0} placeholder={newPaymentStatus === "PAID" ? t("Required", "မဖြစ်မနေ") : t("Optional", "စိတ်ကြိုက်")} value={item.unitCost} onChange={e => updateFormItem(index, "unitCost", e.target.value)} className="h-9 text-xs" title="Unit Cost" />
-                    </div>
-                    <div className="w-full sm:w-28">
-                      <Input type="number" min={0} placeholder={newPaymentStatus === "PAID" ? t("Required", "မဖြစ်မနေ") : t("Optional", "စိတ်ကြိုက်")} value={item.sellingPrice} onChange={e => updateFormItem(index, "sellingPrice", e.target.value)} className="h-9 text-xs" title="Selling Price" />
-                    </div>
-                  </>
+                  <div className="w-full sm:w-28">
+                    <Input 
+                      type="number" 
+                      min={0} 
+                      placeholder={newPaymentStatus === "PAID" ? t("Required", "မဖြစ်မနေ") : t("Optional", "စိတ်ကြိုက်")} 
+                      value={item.unitCost} 
+                      onChange={e => {
+                        const cost = Number(e.target.value) || 0
+                        updateFormItem(index, "unitCost", e.target.value)
+                        if (Number(item.sellingPrice) < cost) {
+                          updateFormItem(index, "sellingPrice", Math.round(cost * 1.2))
+                        }
+                      }} 
+                      className="h-9 text-xs" 
+                      title="Unit Cost" 
+                    />
+                  </div>
                   <Button type="button" variant="ghost" size="icon" onClick={() => removeFormItem(index)} disabled={createLoading || formItems.length === 1} className="self-end sm:self-center h-8 w-8 text-destructive disabled:cursor-not-allowed disabled:opacity-50">
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -853,10 +873,6 @@ export default function PurchasesPage() {
               <div>
                 <span className="text-xs font-semibold text-muted-foreground uppercase">{t("Total Cost Price", "စုစုပေါင်းအရင်း")}: </span>
                 <span className="font-bold text-foreground text-sm">{createCalculations.totalCost.toLocaleString()} Ks</span>
-              </div>
-              <div>
-                <span className="text-xs font-semibold text-muted-foreground uppercase">{t("Total Sell Value", "စုစုပေါင်းရောင်းဈေး")}: </span>
-                <span className="font-black text-sm text-emerald-600 dark:text-emerald-400">{createCalculations.totalSelling.toLocaleString()} Ks</span>
               </div>
             </div>
             
@@ -912,24 +928,69 @@ export default function PurchasesPage() {
             <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/20 rounded-xl border border-border">
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold uppercase text-foreground">{t("Supplier Payment", "ပေးသွင်းသူ ပေးချေမှု")}</label>
-                <select disabled={selectedOrder?.paymentStatus === "PAID"} className="w-full h-10 px-3 rounded-lg border bg-background text-sm disabled:cursor-not-allowed disabled:opacity-70" value={editPaymentStatus} onChange={e => { setEditPaymentStatus(e.target.value as typeof editPaymentStatus); if (e.target.value === "NO_PAY") setAdditionalPayment(0) }}>
+                <select 
+                  disabled={selectedOrder?.paymentStatus === "PAID"} 
+                  className="w-full h-10 px-3 rounded-lg border bg-background text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70" 
+                  value={editPaymentStatus} 
+                  onChange={e => { 
+                    const next = e.target.value as typeof editPaymentStatus
+                    setEditPaymentStatus(next)
+                    if (next === "NO_PAY") {
+                      setAdditionalPayment(0)
+                    } else if (next === "PAID" && editRemainingAmount > 0 && additionalPayment === 0) {
+                      setAdditionalPayment(editRemainingAmount)
+                    }
+                  }}
+                >
                   <option value="NO_PAY" disabled={selectedOrder?.paymentStatus === "PARTIAL" || selectedOrder?.paymentStatus === "PAID"}>{t("No Pay", "မပေးရသေး")}</option>
                   <option value="PARTIAL">{t("Partial Pay", "တစ်စိတ်တစ်ပိုင်း")}</option>
                   <option value="PAID">{t("Fully Paid", "အပြည့်ပေးပြီး")}</option>
                 </select>
               </div>
-              {(selectedOrder?.amountPaid || 0) > 0 && <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase text-foreground">{t("Paid So Far", "ပေးပြီးသားငွေ")}</label>
-                <Input disabled value={`${(selectedOrder?.amountPaid || 0).toLocaleString()} Ks`} className="bg-muted/50 font-semibold disabled:cursor-not-allowed disabled:opacity-70" />
-              </div>}
+              {(selectedOrder?.amountPaid || 0) > 0 && (
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase text-foreground">{t("Paid So Far", "ပေးပြီးသားငွေ")}</label>
+                  <Input disabled value={`${(selectedOrder?.amountPaid || 0).toLocaleString()} Ks`} className="bg-muted/50 font-semibold disabled:cursor-not-allowed disabled:opacity-70" />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold uppercase text-foreground">{t("Remaining Amount", "ကျန်ငွေ")}</label>
                 <Input disabled value={editTotalCost > 0 ? `${editRemainingAmount.toLocaleString()} Ks` : t("Not calculated yet", "မတွက်ချက်ရသေးပါ")} className="bg-blue-50 font-semibold text-blue-900 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-blue-950/30 dark:text-blue-200" />
               </div>
-              {editPaymentStatus !== "NO_PAY" && (editPaymentStatus !== "PAID" || editRemainingAmount > 0) && <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase text-foreground">{t("Additional Payment", "ထပ်ပေးမည့်ငွေ")}</label>
-                <Input type="number" min={0} value={additionalPayment} onChange={e => setAdditionalPayment(Number(e.target.value) || 0)} className="disabled:cursor-not-allowed disabled:opacity-70" />
-              </div>}
+              {editPaymentStatus !== "NO_PAY" && (
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="block text-xs font-bold uppercase text-foreground">
+                      {t("Additional Payment", "ထပ်ပေးမည့်ငွေ")} {editPaymentStatus === "PAID" && editRemainingAmount > 0 && <span className="text-destructive">*</span>}
+                    </label>
+                    {editRemainingAmount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setAdditionalPayment(editRemainingAmount)}
+                        className="text-[11px] font-bold text-primary hover:underline cursor-pointer bg-primary/10 px-2 py-0.5 rounded border border-primary/20 transition-all hover:bg-primary/20"
+                      >
+                        {t(`Fill Remaining (${editRemainingAmount.toLocaleString()} Ks)`, `ကျန်ငွေ အကုန်ဖြည့်မည် (${editRemainingAmount.toLocaleString()} Ks)`)}
+                      </button>
+                    )}
+                  </div>
+                  <Input 
+                    type="number" 
+                    min={0} 
+                    value={additionalPayment || ""} 
+                    placeholder={editPaymentStatus === "PAID" ? `${editRemainingAmount.toLocaleString()} Ks` : "0"}
+                    onChange={e => setAdditionalPayment(Number(e.target.value) || 0)} 
+                    className={`font-bold ${editPaymentStatus === "PAID" && editRemainingAmount > 0 && additionalPayment < editRemainingAmount ? "border-amber-500 focus-visible:ring-amber-500" : ""}`} 
+                  />
+                  {editPaymentStatus === "PAID" && editRemainingAmount > 0 && additionalPayment < editRemainingAmount && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold mt-1">
+                      ⚠️ {t(
+                        `Please enter the remaining amount of ${(editRemainingAmount - additionalPayment).toLocaleString()} Ks to complete full payment.`,
+                        `အပြည့်ပေးချေရန် ကျန်ငွေ ${(editRemainingAmount - additionalPayment).toLocaleString()} Ks အားလုံး ထည့်သွင်းပေးရပါမည်။`
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="space-y-1.5">
                 <label className={`block text-xs font-bold uppercase ${editArrivalDate === todayDate ? "text-destructive" : "text-foreground"}`}>{t("Arrival Date", "ရောက်ရှိမည့်ရက်")} <span className="text-destructive">*</span></label>
                 <Input required type="date" min={todayDate} value={editArrivalDate} onChange={e => setEditArrivalDate(e.target.value)} className={editArrivalDate === todayDate ? "border-destructive ring-1 ring-destructive" : ""} />
@@ -951,36 +1012,66 @@ export default function PurchasesPage() {
                       <div className="font-bold text-sm">{item.variant?.product?.name} - {item.variant?.name}</div>
                       <div className="text-xs text-muted-foreground">{t("Ordered", "မှာယူထားသည်")}: {item.quantity} pcs @ {item.unitCost} Ks</div>
                     </div>
-                    <div className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
-                      <div className="space-y-1 w-20">
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("Rcvd Qty", "လက်ခံ ရရှိအရေအတွက်")}</label>
-                        <Input 
-                          type="number" 
-                          className="h-8 text-sm" 
-                          value={formItem.quantity}
-                          onChange={e => updateReceiveItem(item.id, "quantity", e.target.value)}
-                          min={1}
-                        />
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
+                        <div className="space-y-1 w-20">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("Rcvd Qty", "လက်ခံ ရရှိအရေအတွက်")}</label>
+                          <Input 
+                            type="number" 
+                            className="h-8 text-sm" 
+                            value={formItem.quantity}
+                            onChange={e => updateReceiveItem(item.id, "quantity", e.target.value)}
+                            min={1}
+                          />
+                        </div>
+                        <div className="space-y-1 w-24">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("Cost (Ks)", "မူရင်းဈေး (ကျပ်)")}</label>
+                          <Input 
+                            type="number" 
+                            className="h-8 text-sm" 
+                            value={formItem.unitCost}
+                            onChange={e => updateReceiveItem(item.id, "unitCost", e.target.value)}
+                            min={1}
+                          />
+                        </div>
+                        <div className="space-y-1 w-28">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("Sell Price (Ks)", "ရောင်းဈေး (ကျပ်)")}</label>
+                          <Input 
+                            type="number" 
+                            className="h-8 text-sm text-primary font-bold" 
+                            value={formItem.sellingPrice}
+                            onChange={e => updateReceiveItem(item.id, "sellingPrice", e.target.value)}
+                            min={1}
+                          />
+                        </div>
                       </div>
-                      <div className="space-y-1 w-24">
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("Cost (Ks)", "မူရင်းဈေး (ကျပ်)")}</label>
-                        <Input 
-                          type="number" 
-                          className="h-8 text-sm" 
-                          value={formItem.unitCost}
-                          onChange={e => updateReceiveItem(item.id, "unitCost", e.target.value)}
-                          min={1}
-                        />
-                      </div>
-                      <div className="space-y-1 w-28">
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("Sell Price (Ks)", "ရောင်းဈေး (ကျပ်)")}</label>
-                        <Input 
-                          type="number" 
-                          className="h-8 text-sm text-primary font-bold" 
-                          value={formItem.sellingPrice}
-                          onChange={e => updateReceiveItem(item.id, "sellingPrice", e.target.value)}
-                          min={1}
-                        />
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border/40">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">{t("Markup", "အမြတ်")}:</span>
+                        {[10, 15, 20, 25, 30].map(pct => (
+                          <button
+                            key={pct}
+                            type="button"
+                            onClick={() => applyMarkupToReceive(item.id, pct)}
+                            className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-background hover:bg-primary hover:text-primary-foreground text-foreground border border-border transition-all shadow-xs active:scale-95 cursor-pointer"
+                            title={`Set selling price to +${pct}% of cost`}
+                          >
+                            +{pct}%
+                          </button>
+                        ))}
+                        <div className="inline-flex items-center gap-1 bg-background border border-border rounded-md px-1.5 py-0.5 shadow-xs">
+                          <input
+                            type="number"
+                            placeholder="%"
+                            min={0}
+                            max={500}
+                            className="w-10 h-4 text-[10px] font-bold text-center bg-transparent border-0 p-0 focus:outline-none focus:ring-0"
+                            onChange={(e) => {
+                              const val = Number(e.target.value)
+                              if (val > 0) applyMarkupToReceive(item.id, val)
+                            }}
+                          />
+                          <span className="text-[9px] text-muted-foreground font-semibold">%</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1010,9 +1101,9 @@ export default function PurchasesPage() {
 
           <DialogFooter className="mt-4 border-t border-border pt-4">
             <Button variant="outline" disabled={receiveLoading} onClick={() => { setSelectedOrder(null); setEditOrder(null) }}>{t("Close", "ပိတ်မည်")}</Button>
-            <Button variant="outline" onClick={handleSaveEdit} disabled={receiveLoading || !canSaveEdit} title={!canSaveEdit ? t("Complete all required fields before saving.", "သိမ်းရန် လိုအပ်သောအချက်များအားလုံး ဖြည့်စွက်ပါ။") : undefined}>
+            {/* <Button variant="outline" onClick={handleSaveEdit} disabled={receiveLoading || !canSaveEdit} title={!canSaveEdit ? t("Complete all required fields before saving.", "သိမ်းရန် လိုအပ်သောအချက်များအားလုံး ဖြည့်စွက်ပါ။") : undefined}>
               {t("Save for Later", "နောက်မှဆက်လုပ်ရန် သိမ်းမည်")}
-            </Button>
+            </Button> */}
             <Button onClick={handleReceive} disabled={!canReceive} title={!canReceive ? t("Complete all required fields before receiving goods.", "ပစ္စည်းလက်ခံရန် လိုအပ်သောအချက်များအားလုံး ဖြည့်စွက်ပါ။") : undefined} className="font-bold bg-primary text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50">
               {receiveLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t("Receive Goods", "ပစ္စည်းများ လက်ခံမည်")}

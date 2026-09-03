@@ -21,6 +21,19 @@ export interface ReceiptTransaction {
   note: string | null;
   receiptEmail: string | null;
   createdAt: string | Date;
+  customer?: {
+    id: string;
+    name: string;
+    phone?: string | null;
+    address?: string | null;
+  } | null;
+  salesOrder?: {
+    id: string;
+    paymentStatus: string;
+    depositStatus?: string | null;
+    amountPaid: number;
+    total: number;
+  } | null;
   branch: {
     id: string;
     name: string;
@@ -74,8 +87,17 @@ export function ReceiptView({ transaction, isOpen, onClose }: ReceiptViewProps) 
     window.print()
   }
 
-  // Calculate totals
+  // Calculate totals & debt details
   const totalMMK = transaction.total
+  const isDebt = transaction.paymentMethod === "DEBT" || Boolean(transaction.salesOrder)
+  const paidAmount = isDebt
+    ? (transaction.salesOrder?.amountPaid ?? transaction.cashReceived ?? (transaction.paymentMethod === "DEBT" ? 0 : totalMMK))
+    : (transaction.cashReceived ?? totalMMK)
+  const remainingDebt = isDebt
+    ? Math.max(0, totalMMK - paidAmount)
+    : 0
+  const isFullyPaidDebt = isDebt && (remainingDebt <= 0 || transaction.salesOrder?.paymentStatus === "PAID")
+  const isZeroPay = isDebt && !isFullyPaidDebt && paidAmount <= 0
   const dateString = new Date(transaction.createdAt).toLocaleString()
 
   return (
@@ -101,6 +123,14 @@ export function ReceiptView({ transaction, isOpen, onClose }: ReceiptViewProps) 
               <span>{t("Receipt ID:", "ဘောက်ချာ အမှတ်:")}</span>
               <span className="font-mono text-foreground print:text-black">{transaction.id}</span>
             </div>
+            {transaction.customer && (
+              <div className="flex justify-between">
+                <span>{t("Customer:", "ဝယ်ယူသူ:")}</span>
+                <span className="text-foreground print:text-black font-bold">
+                  {transaction.customer.name} {transaction.customer.phone ? `(${transaction.customer.phone})` : ""}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span>{t("Date:", "အချိန်:")}</span>
               <span className="text-foreground print:text-black">{dateString}</span>
@@ -111,7 +141,11 @@ export function ReceiptView({ transaction, isOpen, onClose }: ReceiptViewProps) 
             </div>
             <div className="flex justify-between">
               <span>{t("Payment:", "ချေမှု:")}</span>
-              <span className="text-foreground print:text-black font-semibold">{transaction.paymentMethod}</span>
+              <span className="text-foreground print:text-black font-bold">
+                {isDebt 
+                  ? (isFullyPaidDebt ? t("Credit / Debt (Paid in Full)", "ကြွေးရောင်း (ငွေကျေပြီး)") : t("Credit / Debt", "ကြွေးရောင်း")) 
+                  : transaction.paymentMethod}
+              </span>
             </div>
           </div>
 
@@ -160,17 +194,60 @@ export function ReceiptView({ transaction, isOpen, onClose }: ReceiptViewProps) 
               <span>{t("Grand Total:", "ကျသင့်ငွေ:")}</span>
               <span className="text-sm">{totalMMK.toLocaleString()} Ks</span>
             </div>
-            {transaction.cashReceived !== null && (
-              <div className="flex justify-between font-semibold pt-1 border-t border-border/20 print:border-black/15">
-                <span className="text-muted-foreground print:text-black/80">{t("Cash Paid:", "ပေးငွေ:")}</span>
-                <span>{transaction.cashReceived.toLocaleString()} Ks</span>
-              </div>
-            )}
-            {transaction.changeGiven !== null && (
-              <div className="flex justify-between font-semibold">
-                <span className="text-muted-foreground print:text-black/80">{t("Change:", "ပြန်အမ်းငွေ:")}</span>
-                <span>{transaction.changeGiven.toLocaleString()} Ks</span>
-              </div>
+
+            {isDebt ? (
+              <>
+                <div className="flex justify-between font-semibold pt-1 border-t border-border/20 print:border-black/15">
+                  <span className="text-muted-foreground print:text-black/80">
+                    {isFullyPaidDebt 
+                      ? t("Total Amount Paid:", "စုစုပေါင်း ပေးချေပြီးငွေ:")
+                      : (paidAmount > 0 ? t("Paid / Down Payment:", "စရန်ငွေ / ပေးငွေ:") : t("Amount Paid:", "ပေးငွေ:"))}
+                  </span>
+                  <span className={`font-bold ${isFullyPaidDebt ? "text-emerald-600 dark:text-emerald-400 font-black" : ""}`}>
+                    {(isFullyPaidDebt ? totalMMK : paidAmount).toLocaleString()} Ks
+                  </span>
+                </div>
+                <div className={`flex justify-between font-black text-xs pt-1.5 pb-1 border-t-2 border-b-2 border-dashed print:border-black print:text-black ${
+                  isFullyPaidDebt
+                    ? "text-emerald-700 dark:text-emerald-400 border-emerald-500/40"
+                    : "text-amber-700 dark:text-amber-400 border-amber-500/40"
+                }`}>
+                  <span>{t("REMAINING DEBT:", "ပေးရန် ကျန်ငွေ:")}</span>
+                  <span className="text-sm font-black">
+                    {isFullyPaidDebt ? "0 Ks" : `${remainingDebt.toLocaleString()} Ks`}
+                  </span>
+                </div>
+                <div className="pt-1 text-center">
+                  <span className={`inline-block text-[10px] font-extrabold uppercase px-2 py-0.5 rounded border print:border-black print:text-black ${
+                    isFullyPaidDebt
+                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                      : isZeroPay 
+                      ? "bg-destructive/10 text-destructive border-destructive/30" 
+                      : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                  }`}>
+                    {isFullyPaidDebt
+                      ? t("FULLY PAID (ကြွေးကျေပြီး)", "FULLY PAID (ကြွေးကျေပြီး)")
+                      : isZeroPay 
+                      ? t("ZERO PAY / FULL DEBT (ကြွေးကျန်အပြည့်)", "ZERO PAY / FULL DEBT (ကြွေးကျန်အပြည့်)") 
+                      : t("PARTIAL DEBT (တစ်စိတ်တစ်ပိုင်း ပေးချေပြီး)", "PARTIAL DEBT (တစ်စိတ်တစ်ပိုင်း ပေးချေပြီး)")}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                {transaction.cashReceived !== null && (
+                  <div className="flex justify-between font-semibold pt-1 border-t border-border/20 print:border-black/15">
+                    <span className="text-muted-foreground print:text-black/80">{t("Cash Paid:", "ပေးငွေ:")}</span>
+                    <span>{transaction.cashReceived.toLocaleString()} Ks</span>
+                  </div>
+                )}
+                {transaction.changeGiven !== null && (
+                  <div className="flex justify-between font-semibold">
+                    <span className="text-muted-foreground print:text-black/80">{t("Change:", "ပြန်အမ်းငွေ:")}</span>
+                    <span>{transaction.changeGiven.toLocaleString()} Ks</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

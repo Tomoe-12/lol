@@ -74,7 +74,7 @@ export const useCartStore = create<CartState>()(
         const variantId = newItem.selectedVariant?.id || "no-variant";
         const itemId = `${newItem.product.id}-${variantId}`;
 
-        const unitPrice = newItem.product.price || 0;
+        const unitPrice = newItem.selectedVariant?.price ?? newItem.product.price ?? 0;
 
         const existingItems = get().items;
         const existingItemIndex = existingItems.findIndex((item) => item.id === itemId);

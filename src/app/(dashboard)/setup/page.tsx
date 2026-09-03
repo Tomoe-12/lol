@@ -38,6 +38,7 @@ interface Variant {
   name: string;
   barcode?: string;
   lowStockThreshold?: number;
+  highStockThreshold?: number;
   costPrice?: number;
   price?: number;
 }
@@ -159,14 +160,20 @@ export default function ProductsPage() {
           : prod.variants.find((variant) => (variant.costPrice ?? 0) > 0)?.costPrice ?? 0
       )
       setProdSellingPrice(prod.price || prod.variants.find((variant) => (variant.price ?? 0) > 0)?.price || 0)
-      setProdVariants(prod.variants)
+      setProdVariants(prod.variants.map((variant) => ({
+        ...variant,
+        costPrice: variant.costPrice ?? prod.costPrice ?? 0,
+        price: variant.price ?? prod.price ?? 0,
+        lowStockThreshold: variant.lowStockThreshold ?? 10,
+        highStockThreshold: variant.highStockThreshold ?? 100,
+      })))
     } else {
       setProdName("")
       setProdCategoryId(categories.length > 0 ? categories[0].id : "")
       setProdImageUrl("")
       setProdCostPrice(0)
       setProdSellingPrice(0)
-      setProdVariants([{ name: "Standard", barcode: "", lowStockThreshold: 10, costPrice: 0, price: 0 }])
+      setProdVariants([{ name: "Standard", barcode: "", costPrice: 0, price: 0, lowStockThreshold: 10, highStockThreshold: 100 }])
     }
     setIsFormOpen(true)
   }
@@ -196,8 +203,23 @@ export default function ProductsPage() {
       return
     }
 
+    if (namedVariants.some((v) => (v.costPrice ?? 0) < 0 || (v.price ?? 0) < 0)) {
+      setError(t("Cost price and selling price cannot be negative.", "မူရင်းဈေးနှင့် ရောင်းဈေးသည် အနုတ်မဖြစ်ရပါ။"))
+      return
+    }
+
     if (namedVariants.some((v) => (v.lowStockThreshold ?? 0) < 0)) {
       setError(t("Low stock thresholds cannot be negative.", "လက်ကျန်သတိပေး တန်ဖိုးသည် အနုတ်မဖြစ်ရပါ။"))
+      return
+    }
+
+    if (namedVariants.some((v) => (v.highStockThreshold ?? 0) < 0)) {
+      setError(t("Maximum stock thresholds cannot be negative.", "အများဆုံး သတိပေးလက်ကျန်သည် အနုတ်မဖြစ်ရပါ။"))
+      return
+    }
+
+    if (namedVariants.some((v) => (v.highStockThreshold ?? 0) > 0 && (v.highStockThreshold ?? 0) < (v.lowStockThreshold ?? 0))) {
+      setError(t("Maximum stock threshold must be greater than or equal to minimum stock threshold.", "အများဆုံး သတိပေးလက်ကျန်သည် အနည်းဆုံးထက် ကြီးရပါမည်။"))
       return
     }
 
@@ -301,8 +323,18 @@ export default function ProductsPage() {
 
   // Dynamic row modifiers for variants & add-ons
   const addVariantRow = () => {
-    const sharedCostPrice = prodVariants.find((variant) => (variant.costPrice ?? 0) > 0)?.costPrice ?? 0
-    setProdVariants([...prodVariants, { name: "", barcode: "", lowStockThreshold: 10, costPrice: sharedCostPrice, price: 0 }])
+    const lastVariant = prodVariants[prodVariants.length - 1]
+    setProdVariants([
+      ...prodVariants,
+      {
+        name: "",
+        barcode: "",
+        costPrice: lastVariant?.costPrice ?? 0,
+        price: lastVariant?.price ?? 0,
+        lowStockThreshold: 10,
+        highStockThreshold: 100,
+      },
+    ])
   }
 
   const removeVariantRow = (index: number) => {
@@ -554,7 +586,7 @@ export default function ProductsPage() {
                     <div className="flex flex-wrap gap-1.5">
                       {p.variants.map((v, i) => (
                         <Badge key={i} variant="secondary" className="text-[10px] py-0.5 px-2 font-bold">
-                          {v.name}
+                          {v.name} · {(v.price ?? p.price ?? 0).toLocaleString()} Ks
                         </Badge>
                       ))}
                     </div>
@@ -766,10 +798,11 @@ export default function ProductsPage() {
 
               <div className="flex gap-2 items-center px-1">
                 <label className="flex-1 text-[10px] font-bold text-muted-foreground uppercase">{t("Size / Name", "အမည် / အရွယ်အစား")}</label>
-                <label className="w-36 text-[10px] font-bold text-muted-foreground uppercase">{t("Barcode", "ဘားကုဒ်")}</label>
-                {/* <label className="w-24 text-[10px] font-bold text-muted-foreground uppercase">{t("Cost (Ks)", "ဝယ်ရင်းဈေး")}</label> */}
-                {/* <label className="w-24 text-[10px] font-bold text-muted-foreground uppercase">{t("Sell (Ks)", "ရောင်းဈေး")}</label> */}
-                <label className="w-20 text-[10px] font-bold text-muted-foreground uppercase">{t("Low Stock", "သတိပေးလက်ကျန်")}</label>
+                <label className="w-28 text-[10px] font-bold text-muted-foreground uppercase">{t("Barcode", "ဘားကုဒ်")}</label>
+                <label className="w-24 text-[10px] font-bold text-muted-foreground uppercase">{t("Cost (Ks)", "ဝယ်ရင်းဈေး")}</label>
+                <label className="w-24 text-[10px] font-bold text-muted-foreground uppercase">{t("Sell (Ks)", "ရောင်းဈေး")}</label>
+                <label className="w-16 text-[10px] font-bold text-muted-foreground uppercase">{t("Min", "အနည်းဆုံး")}</label>
+                <label className="w-16 text-[10px] font-bold text-muted-foreground uppercase">{t("Max", "အများဆုံး")}</label>
                 <div className="w-8"></div>
               </div>
 
@@ -784,19 +817,19 @@ export default function ProductsPage() {
                   />
                   <Input
                     type="text"
-                    placeholder="Variant Barcode"
+                    placeholder="Barcode"
                     value={v.barcode || ""}
                     onChange={(e) => updateVariantRow(i, "barcode", e.target.value)}
-                    className="w-36 h-9 bg-muted/10 border-border text-xs font-semibold"
+                    className="w-28 h-9 bg-muted/10 border-border text-xs font-semibold"
                   />
-                  {/* <Input
+                  <Input
                     type="number"
                     min={0}
                     placeholder="Cost"
                     value={v.costPrice ?? 0}
                     onChange={(e) => updateVariantRow(i, "costPrice", Number(e.target.value))}
                     className="w-24 h-9 bg-muted/10 border-border text-xs font-semibold"
-                    title={t("Cost Price from supplier", "ဝယ်ရင်းဈေး")}
+                    title={t("Cost Price for this variant", "ဤအမျိုးအစားအတွက် ဝယ်ရင်းဈေး")}
                   />
                   <Input
                     type="number"
@@ -805,15 +838,23 @@ export default function ProductsPage() {
                     value={v.price ?? 0}
                     onChange={(e) => updateVariantRow(i, "price", Number(e.target.value))}
                     className="w-24 h-9 bg-muted/10 border-border text-xs font-bold text-primary"
-                    title={t("Selling Price to customers", "ရောင်းဈေး")}
-                  /> */}
+                    title={t("Selling Price for this variant", "ဤအမျိုးအစားအတွက် ရောင်းဈေး")}
+                  />
                   <Input
                     type="number"
                     min={0}
                     value={v.lowStockThreshold ?? 10}
                     onChange={(e) => updateVariantRow(i, "lowStockThreshold", Number(e.target.value))}
-                    className="w-20 h-9 bg-muted/10 border-border text-xs font-semibold"
-                    title={t("Low Stock Alert Threshold", "သတိပေးလက်ကျန်")}
+                    className="w-16 h-9 bg-muted/10 border-border text-xs font-semibold"
+                    title={t("Minimum Stock Alert Threshold", "အနည်းဆုံး သတိပေးလက်ကျန်")}
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    value={v.highStockThreshold ?? 100}
+                    onChange={(e) => updateVariantRow(i, "highStockThreshold", Number(e.target.value))}
+                    className="w-16 h-9 bg-muted/10 border-border text-xs font-semibold"
+                    title={t("Maximum Stock Alert Threshold", "အများဆုံး သတိပေးလက်ကျန်")}
                   />
                   <Button
                     type="button"

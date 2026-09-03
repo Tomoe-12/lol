@@ -71,6 +71,7 @@ async function fetchBranchInventory(branchId: string) {
           costPrice: variant.costPrice ?? 0,
           price: product.price ?? 0,
           lowStockThreshold: variant.lowStockThreshold,
+          highStockThreshold: variant.highStockThreshold ?? 100,
           product: {
             id: product.id,
             name: product.name,
@@ -81,6 +82,7 @@ async function fetchBranchInventory(branchId: string) {
         },
         quantity: stock?.quantity ?? 0,
         lowStockThreshold: variant.lowStockThreshold,
+        highStockThreshold: variant.highStockThreshold ?? 100,
       });
     }
   }

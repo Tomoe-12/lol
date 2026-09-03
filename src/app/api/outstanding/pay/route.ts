@@ -89,6 +89,14 @@ export async function POST(request: Request) {
         },
       });
 
+      // Synchronize linked Transaction cashReceived so receipts and sales history show updated payment
+      await tx.transaction.updateMany({
+        where: { salesOrderId: order.id },
+        data: {
+          cashReceived: newAmountPaid,
+        },
+      });
+
       // Also log audit entry
       await tx.auditLog.create({
         data: {

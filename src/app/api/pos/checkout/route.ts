@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       customerId,
       wholesaleSale,
       wholesalePaid,
+      debtPaid,
       isDelivery,
       deliveryCustomerName,
       deliveryPhone,
@@ -90,14 +91,25 @@ export async function POST(request: Request) {
     }
     const isWholesaleSale = wholesaleSale === true;
     const wholesalePayment = Number(wholesalePaid ?? 0);
+    const isDebtSale = paymentMethod === "DEBT";
+    const debtPayment = isDebtSale ? Number(debtPaid ?? cashReceived ?? 0) : 0;
+
+    if (isDebtSale && !customerId) {
+      return NextResponse.json({ error: "A named customer is required for a credit / debt sale." }, { status: 400 });
+    }
+    if (isDebtSale && (!Number.isFinite(debtPayment) || debtPayment < 0 || debtPayment >= total)) {
+      return NextResponse.json({ error: "Debt down payment must be between zero and less than the sale total." }, { status: 400 });
+    }
     if (isWholesaleSale && !customerId) return NextResponse.json({ error: "A named customer is required for a wholesale / credit sale." }, { status: 400 });
     if (isWholesaleSale && (!Number.isFinite(wholesalePayment) || wholesalePayment < 0 || wholesalePayment > total)) return NextResponse.json({ error: "Wholesale payment must be between zero and the sale total." }, { status: 400 });
     if (isWholesaleSale && wholesalePayment === 0 && paymentMethod !== "DEBT") return NextResponse.json({ error: "No-pay wholesale sales must use the Credit payment method." }, { status: 400 });
     if (isWholesaleSale && wholesalePayment > 0 && paymentMethod === "DEBT") return NextResponse.json({ error: "Partial wholesale payments must use Cash, Card, or QR." }, { status: 400 });
     if (isWholesaleSale && (!Number.isFinite(Number(subtotal)) || Number(subtotal) < 0 || !Number.isFinite(Number(total)) || Number(total) < 0)) return NextResponse.json({ error: "Wholesale subtotal and total must be valid amounts." }, { status: 400 });
-    if (isWholesaleSale) {
-      const customer = await prisma.customer.findUnique({ where: { id: customerId }, select: { id: true } });
-      if (!customer) return NextResponse.json({ error: "Customer not found." }, { status: 400 });
+    if (isWholesaleSale || isDebtSale) {
+      if (customerId) {
+        const customer = await prisma.customer.findUnique({ where: { id: customerId }, select: { id: true } });
+        if (!customer) return NextResponse.json({ error: "Customer not found." }, { status: 400 });
+      }
     }
 
     // 1. Discount Validation (R1)
@@ -305,20 +317,26 @@ export async function POST(request: Request) {
         });
       }
 
-      if (isWholesaleSale || isDelivery) {
-        const wholesaleOrder = await tx.salesOrder.create({
+      if (isWholesaleSale || isDelivery || isDebtSale) {
+        const initialAmountPaid = isWholesaleSale ? wholesalePayment : (isDebtSale ? debtPayment : total);
+        const initialPaymentStatus = initialAmountPaid >= total ? "PAID" : "PARTIAL";
+        const initialDepositStatus = initialAmountPaid <= 0 ? "NO_PAY" : (initialAmountPaid >= total ? "PAID" : "PARTIAL");
+
+        const salesOrderRecord = await tx.salesOrder.create({
           data: {
             branchId,
             customerId: customerId || null,
             status: isDelivery ? "DELIVERING" : "COMPLETED",
-            paymentStatus: isWholesaleSale ? (wholesalePayment >= total ? "PAID" : "PARTIAL") : "PAID",
-            depositStatus: isWholesaleSale ? (wholesalePayment <= 0 ? "NO_PAY" : wholesalePayment >= total ? "PAID" : "PARTIAL") : "PAID",
+            paymentStatus: initialPaymentStatus,
+            depositStatus: initialDepositStatus,
             subtotal,
             discount: discountAmount,
             total,
-            amountPaid: isWholesaleSale ? wholesalePayment : total,
-            paymentMethod: (isWholesaleSale ? paymentMethod : paymentMethod) as PaymentMethod,
-            note: `POS transaction #${newTransaction.id}${note ? ` — ${note}` : ""}`,
+            amountPaid: initialAmountPaid,
+            paymentMethod: paymentMethod as PaymentMethod,
+            note: isDebtSale 
+              ? `Credit sale POS transaction #${newTransaction.id}${note ? ` — ${note}` : ""}`
+              : `POS transaction #${newTransaction.id}${note ? ` — ${note}` : ""}`,
             isDelivery,
             deliveryStatus: isDelivery ? "PENDING" : "DELIVERED",
             deliveryCustomerName: isDelivery ? deliveryCustomerName : null,
@@ -337,11 +355,24 @@ export async function POST(request: Request) {
                 total: (item.unitPrice * item.quantity) - (item.discount || 0),
               })),
             },
-            payments: isWholesaleSale && wholesalePayment > 0 ? { create: { amount: wholesalePayment, method: paymentMethod as PaymentMethod, collectedByStaffId: staff.id, note: "Wholesale sale payment at POS" } } : undefined,
+            payments: initialAmountPaid > 0 ? {
+              create: {
+                amount: initialAmountPaid,
+                method: (isDebtSale ? "CASH" : paymentMethod) as PaymentMethod,
+                collectedByStaffId: staff.id,
+                note: isWholesaleSale 
+                  ? "Wholesale sale payment at POS" 
+                  : (isDebtSale ? "Credit sale down payment at POS" : "POS payment"),
+              }
+            } : undefined,
           },
         });
-        if (wholesaleOrder) {
-          await tx.inventoryLog.updateMany({ where: { transactionId: newTransaction.id }, data: { salesOrderId: wholesaleOrder.id } });
+        if (salesOrderRecord) {
+          await tx.inventoryLog.updateMany({ where: { transactionId: newTransaction.id }, data: { salesOrderId: salesOrderRecord.id } });
+          await tx.transaction.update({
+            where: { id: newTransaction.id },
+            data: { salesOrderId: salesOrderRecord.id, customerId: customerId || null },
+          });
         }
       }
 
@@ -355,7 +386,29 @@ export async function POST(request: Request) {
         },
       });
 
-      return newTransaction;
+      return await tx.transaction.findUnique({
+        where: { id: newTransaction.id },
+        include: {
+          items: {
+            include: {
+              product: true,
+              variant: true,
+            },
+          },
+          branch: true,
+          staff: true,
+          customer: true,
+          salesOrder: {
+            select: {
+              id: true,
+              paymentStatus: true,
+              depositStatus: true,
+              amountPaid: true,
+              total: true,
+            },
+          },
+        },
+      });
     });
 
     return NextResponse.json({ success: true, transaction });

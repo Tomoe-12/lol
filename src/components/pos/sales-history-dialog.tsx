@@ -57,6 +57,18 @@ interface SalesTransactionRecord {
     id?: string;
     name?: string;
   };
+  customer?: {
+    id: string;
+    name: string;
+    phone?: string | null;
+  } | null;
+  salesOrder?: {
+    id: string;
+    paymentStatus: string;
+    depositStatus?: string;
+    amountPaid: number;
+    total: number;
+  } | null;
   items?: TransactionItemRecord[];
 }
 
@@ -170,6 +182,18 @@ export function SalesHistoryDialog({
         id: tItem.staff?.id || "",
         name: tItem.staff?.name || "Cashier",
       },
+      customer: tItem.customer ? {
+        id: tItem.customer.id,
+        name: tItem.customer.name,
+        phone: tItem.customer.phone || null,
+      } : null,
+      salesOrder: tItem.salesOrder ? {
+        id: tItem.salesOrder.id,
+        paymentStatus: tItem.salesOrder.paymentStatus,
+        depositStatus: tItem.salesOrder.depositStatus || null,
+        amountPaid: tItem.salesOrder.amountPaid,
+        total: tItem.salesOrder.total,
+      } : null,
       items: (tItem.items || []).map((i) => ({
         id: i.id,
         productId: i.productId || "",
@@ -308,9 +332,33 @@ export function SalesHistoryDialog({
                         <span className="font-mono text-xs font-black text-primary">
                           #{tItem.code || tItem.id.slice(-8).toUpperCase()}
                         </span>
-                        <Badge variant="outline" className="text-[10px] font-semibold py-0">
-                          {tItem.paymentMethod || "CASH"}
-                        </Badge>
+                        {tItem.paymentMethod === "DEBT" || tItem.salesOrder ? (
+                          (() => {
+                            const orderTotal = tItem.salesOrder?.total ?? (tItem.totalAmount || tItem.total || 0)
+                            const orderPaid = tItem.salesOrder?.amountPaid ?? (tItem.cashReceived ?? 0)
+                            const remaining = Math.max(0, orderTotal - orderPaid)
+                            const isPaid = tItem.salesOrder?.paymentStatus === "PAID" || remaining <= 0
+
+                            return isPaid ? (
+                              <Badge variant="outline" className="text-[10px] font-bold py-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+                                {t("DEBT (PAID IN FULL)", "ကြွေးကျေပြီး")}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] font-bold py-0 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">
+                                {t(`DEBT (DUE: ${remaining.toLocaleString()} Ks)`, `ကြွေးကျန်: ${remaining.toLocaleString()} Ks`)}
+                              </Badge>
+                            )
+                          })()
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] font-semibold py-0">
+                            {tItem.paymentMethod || "CASH"}
+                          </Badge>
+                        )}
+                        {tItem.customer && (
+                          <Badge variant="outline" className="text-[10px] font-bold py-0 border-border text-foreground">
+                            {tItem.customer.name}
+                          </Badge>
+                        )}
                         {tItem.branch?.name && (
                           <Badge variant="secondary" className="text-[10px] font-bold py-0 gap-1 bg-primary/10 text-primary border border-primary/20">
                             <Building className="h-2.5 w-2.5" />

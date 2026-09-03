@@ -25,6 +25,16 @@ export async function GET(request: Request) {
         branch: true,
         staff: { select: { id: true, name: true } },
         items: { include: { product: true, variant: true } },
+        customer: true,
+        salesOrder: {
+          select: {
+            id: true,
+            paymentStatus: true,
+            depositStatus: true,
+            amountPaid: true,
+            total: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     })

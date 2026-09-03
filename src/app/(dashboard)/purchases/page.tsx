@@ -61,6 +61,7 @@ interface PurchaseOrder {
   status: string
   notes: string | null
   note?: string | null
+  voucherNumber?: string | null
   createdAt: string
   supplier: Supplier
   items: PurchaseItem[]
@@ -109,6 +110,7 @@ export default function PurchasesPage() {
   const [createLoading, setCreateLoading] = React.useState(false)
   const [isSubmitConfirmOpen, setIsSubmitConfirmOpen] = React.useState(false)
   const [newSupplierId, setNewSupplierId] = React.useState("")
+  const [newVoucherNumber, setNewVoucherNumber] = React.useState("")
   const [newBranchId, setNewBranchId] = React.useState("")
   const [newNote, setNewNote] = React.useState("")
   const [newArrivalDate, setNewArrivalDate] = React.useState("")
@@ -161,6 +163,7 @@ export default function PurchasesPage() {
   // CREATE LOGIC
   const openCreate = () => {
     setNewSupplierId(suppliers[0]?.id || "")
+    setNewVoucherNumber("")
     setNewNote("")
     setNewArrivalDate(todayDate)
     setFormItems([{ variantId: "", quantity: 1, unitCost: 0, sellingPrice: 0 }])
@@ -175,6 +178,13 @@ export default function PurchasesPage() {
     setFormItems(prev => prev.map((item, itemIndex) =>
       itemIndex === index ? { ...item, [field]: value } : item
     ))
+  }
+
+  const applyMarkupToForm = (index: number, percent: number) => {
+    const cost = Number(formItems[index]?.unitCost) || 0
+    if (cost <= 0) return
+    const calculated = Math.round(cost * (1 + percent / 100))
+    updateFormItem(index, "sellingPrice", calculated)
   }
 
   const removeFormItem = (index: number) => {
@@ -201,6 +211,11 @@ export default function PurchasesPage() {
     if (!confirmed) {
       if (!newSupplierId) {
         setError(t("Please select a supplier before submitting.", "အမှာစာ မတင်မီ ပေးသွင်းသူ ရွေးချယ်ပါ။"))
+        return
+      }
+
+      if (!newVoucherNumber.trim()) {
+        setError(t("Please enter a voucher number.", "ဘောင်ချာနံပါတ် ဖြည့်သွင်းပါ။"))
         return
       }
 
@@ -239,7 +254,10 @@ export default function PurchasesPage() {
           branchId: newBranchId || undefined,
           note: newNote,
           items: validItems,
-          arrivalDate: newArrivalDate
+          arrivalDate: newArrivalDate,
+          voucherNumber: newVoucherNumber.trim(),
+          paymentStatus: "PAID",
+          amountPaid: createCalculations.totalCost
         })
       })
       if (!res.ok) {
@@ -264,7 +282,7 @@ export default function PurchasesPage() {
           items: receivedItems,
           paymentStatus: "PAID",
           amountPaid: createCalculations.totalCost,
-          voucherNumber: `DIRECT-${createData.order.id.slice(-8).toUpperCase()}`,
+          voucherNumber: newVoucherNumber.trim() || `DIRECT-${createData.order.id.slice(-8).toUpperCase()}`,
           arrivalDate: submittedAt
         })
       })
@@ -286,6 +304,15 @@ export default function PurchasesPage() {
     setReceiveItems(prev => prev.map(item => 
       item.id === id ? { ...item, [field]: Number(val) } : item
     ))
+  }
+
+  const applyMarkupToReceive = (itemId: string, percent: number) => {
+    const target = receiveItems.find(i => i.id === itemId)
+    if (!target) return
+    const cost = Number(target.unitCost) || 0
+    if (cost <= 0) return
+    const calculated = Math.round(cost * (1 + percent / 100))
+    updateReceiveItem(itemId, "sellingPrice", String(calculated))
   }
 
   const handleReceive = async () => {
@@ -337,7 +364,9 @@ export default function PurchasesPage() {
     (historyFilter === "ALL" || o.status === historyFilter)
   ).filter(o => {
     const s = searchQuery.toLowerCase()
-    return o.id.toLowerCase().includes(s) || o.supplier.name.toLowerCase().includes(s)
+    return o.id.toLowerCase().includes(s) || 
+      o.supplier.name.toLowerCase().includes(s) || 
+      (o.voucherNumber && o.voucherNumber.toLowerCase().includes(s))
   })
 
   const paginatedCompleted = completedPurchases.slice((currentPage - 1) * pageSize, currentPage * pageSize)
@@ -402,10 +431,10 @@ export default function PurchasesPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={t("Search history...", "မှတ်တမ်း ရှာဖွေရန်...")}
+                placeholder={t("Search by ID, supplier, or voucher...", "ID၊ ပေးသွင်းသူ သို့မဟုတ် ဘောင်ချာဖြင့် ရှာရန်...")}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 w-[250px] bg-card"
+                className="pl-9 h-9 w-[280px] bg-card"
               />
             </div>
           </div>
@@ -421,7 +450,14 @@ export default function PurchasesPage() {
               paginatedCompleted.map(order => (
                 <Card key={order.id} className="p-4 opacity-80 cursor-pointer hover:bg-muted/50 hover:opacity-100 transition-all" onClick={() => setViewOrder(order)}>
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-sm">PO-{order.id.slice(-6).toUpperCase()}</h3>
+                    <div>
+                      <h3 className="font-bold text-sm">PO-{order.id.slice(-6).toUpperCase()}</h3>
+                      {order.voucherNumber && (
+                        <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 inline-block mt-0.5">
+                          {t("Voucher", "ဘောင်ချာ")}: {order.voucherNumber}
+                        </div>
+                      )}
+                    </div>
                     <Badge variant={order.status === "CANCELLED" ? "secondary" : "outline"} className="text-[10px]">{order.status}</Badge>
                   </div>
                   <div className="text-xs text-muted-foreground mb-1">{order.supplier.name}</div>
@@ -465,9 +501,9 @@ export default function PurchasesPage() {
             <DialogTitle>{t("Create Purchase Order", "ဝယ်ယူမှု အမှာစာ အသစ်ပြုလုပ်ရန်")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateSubmit} className="flex-1 overflow-y-auto space-y-4 pr-2">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase text-muted-foreground">{t("Supplier", "ပေးသွင်းသူ")}</label>
+                <label className="text-xs font-bold uppercase text-muted-foreground">{t("Supplier", "ပေးသွင်းသူ")} <span className="text-destructive">*</span></label>
                 <SearchableSelect 
                   items={suppliers}
                   value={newSupplierId}
@@ -479,11 +515,22 @@ export default function PurchasesPage() {
                 />
               </div>
 
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase text-muted-foreground">{t("Voucher Number", "ဘောင်ချာနံပါတ်")} <span className="text-destructive">*</span></label>
+                <Input 
+                  required
+                  value={newVoucherNumber} 
+                  onChange={e => setNewVoucherNumber(e.target.value)} 
+                  placeholder={t("e.g. VCH-00123", "ဥပမာ- VCH-00123")} 
+                  className="h-10 bg-muted/10 border-border font-bold"
+                />
+              </div>
+
               {role === "OWNER" && (
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold">{t("Destination Branch", "ပေးပို့မည့် ဆိုင်ခွဲ")}</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">{t("Destination Branch", "ပေးပို့မည့် ဆိုင်ခွဲ")} <span className="text-destructive">*</span></label>
                   <select 
-                    className="w-full h-10 px-3 rounded-md border bg-card"
+                    className="w-full h-10 px-3 rounded-md border border-border bg-card text-sm font-semibold"
                     value={newBranchId}
                     onChange={e => setNewBranchId(e.target.value)}
                     required
@@ -511,7 +558,7 @@ export default function PurchasesPage() {
                   <Plus className="h-3 w-3 mr-1" /> {t("Add Product", "ပစ္စည်း ထည့်မည်")}
                 </Button>
               </div>
-              <div className="flex gap-2 items-end px-2 pb-1 text-[10px] font-bold uppercase text-muted-foreground mt-4">
+              <div className="hidden sm:flex gap-2 items-end px-2 pb-1 text-[10px] font-bold uppercase text-muted-foreground mt-4">
                 <div className="flex-1">{t("Product Variant", "ပစ္စည်းအမျိုးအစား")}</div>
                 <div className="w-20 text-center">{t("Qty", "အရေအတွက်")}</div>
                 <div className="w-24 text-center">{t("Cost", "မူရင်းဈေး")}</div>
@@ -519,54 +566,84 @@ export default function PurchasesPage() {
                 <div className="w-8"></div>
               </div>
               {formItems.map((item, index) => (
-                <div key={index} className="flex gap-2 items-center bg-muted/20 p-2 rounded-lg border border-border">
-                  <div className="flex-1 min-w-[250px] relative">
-                    <SearchableSelect 
-                      items={allVariants}
-                      value={item.variantId}
-                      onChange={(val) => {
-                        updateFormItem(index, "variantId", val)
-                        const found = allVariants.find(v => v.id === val)
-                        if (found) {
-                          if (found.costPrice !== undefined && found.costPrice > 0) {
-                            updateFormItem(index, "unitCost", found.costPrice)
+                <div key={index} className="flex flex-col gap-2 bg-muted/20 p-3 rounded-lg border border-border">
+                  <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                    <div className="flex-1 min-w-[220px] relative">
+                      <SearchableSelect 
+                        items={allVariants}
+                        value={item.variantId}
+                        onChange={(val) => {
+                          updateFormItem(index, "variantId", val)
+                          const found = allVariants.find(v => v.id === val)
+                          if (found) {
+                            if (found.costPrice !== undefined && found.costPrice > 0) {
+                              updateFormItem(index, "unitCost", found.costPrice)
+                            }
+                            const sell = found.productPrice || found.price || 0
+                            if (sell > 0) {
+                              updateFormItem(index, "sellingPrice", sell)
+                            }
                           }
-                          const sell = found.productPrice || found.price || 0
-                          if (sell > 0) {
-                            updateFormItem(index, "sellingPrice", sell)
-                          }
-                        }
-                      }}
-                      placeholder={t("Search product or barcode...", "ပစ္စည်း သို့မဟုတ် ဘားကုဒ် ရှာဖွေပါ...")}
-                      searchPlaceholder={t("Search product, variant, or barcode...", "ပစ္စည်း သို့မဟုတ် ဘားကုဒ် ရှာဖွေပါ...")}
-                      renderItem={(v) => `${v.productName} - ${v.name} [${v.barcode}]`}
-                      filterItem={(v, search) => v.searchStr.includes(search)}
-                    />
+                        }}
+                        placeholder={t("Search product or barcode...", "ပစ္စည်း သို့မဟုတ် ဘားကုဒ် ရှာဖွေပါ...")}
+                        searchPlaceholder={t("Search product, variant, or barcode...", "ပစ္စည်း သို့မဟုတ် ဘားကုဒ် ရှာဖွေပါ...")}
+                        renderItem={(v) => `${v.productName} - ${v.name} [${v.barcode}]`}
+                        filterItem={(v, search) => v.searchStr.includes(search)}
+                      />
+                    </div>
+                    <div className="w-full sm:w-20">
+                      <Input 
+                        type="number" min={1} placeholder={t("Qty", "အရေအတွက်")} 
+                        value={item.quantity} onChange={e => updateFormItem(index, "quantity", e.target.value)}
+                        className="h-9 text-xs" title="Quantity"
+                      />
+                    </div>
+                    <div className="w-full sm:w-24">
+                      <Input 
+                        type="number" min={1} placeholder={t("Cost", "မူရင်းဈေး")}
+                        value={item.unitCost} onChange={e => updateFormItem(index, "unitCost", e.target.value)}
+                        className="h-9 text-xs" title="Unit Cost"
+                      />
+                    </div>
+                    <div className="w-full sm:w-28">
+                      <Input 
+                        type="number" min={1} placeholder={t("Sell Price", "ရောင်းဈေး")}
+                        value={item.sellingPrice} onChange={e => updateFormItem(index, "sellingPrice", e.target.value)}
+                        className="h-9 text-xs text-primary font-bold" title="Selling Price"
+                      />
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeFormItem(index)} disabled={createLoading || formItems.length === 1} className="self-end sm:self-center h-8 w-8 text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <div className="w-20">
-                    <Input 
-                      type="number" min={1} placeholder={t("Qty", "အရေအတွက်")} 
-                      value={item.quantity} onChange={e => updateFormItem(index, "quantity", e.target.value)}
-                      className="h-9 text-xs" title="Quantity"
-                    />
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-border/40">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">{t("Markup", "အမြတ်")}:</span>
+                    {[10, 15, 20, 25, 30].map(pct => (
+                      <button
+                        key={pct}
+                        type="button"
+                        onClick={() => applyMarkupToForm(index, pct)}
+                        className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-background hover:bg-primary hover:text-primary-foreground text-foreground border border-border transition-all shadow-xs active:scale-95 cursor-pointer"
+                        title={`Set selling price to +${pct}% of cost`}
+                      >
+                        +{pct}%
+                      </button>
+                    ))}
+                    <div className="inline-flex items-center gap-1 bg-background border border-border rounded-md px-1.5 py-0.5 shadow-xs">
+                      <input
+                        type="number"
+                        placeholder="%"
+                        min={0}
+                        max={500}
+                        className="w-10 h-4 text-[10px] font-bold text-center bg-transparent border-0 p-0 focus:outline-none focus:ring-0"
+                        onChange={(e) => {
+                          const val = Number(e.target.value)
+                          if (val > 0) applyMarkupToForm(index, val)
+                        }}
+                      />
+                      <span className="text-[9px] text-muted-foreground font-semibold">%</span>
+                    </div>
                   </div>
-                  <div className="w-24">
-                    <Input 
-                      type="number" min={1} placeholder={t("Cost", "မူရင်းဈေး")}
-                      value={item.unitCost} onChange={e => updateFormItem(index, "unitCost", e.target.value)}
-                      className="h-9 text-xs" title="Unit Cost"
-                    />
-                  </div>
-                  <div className="w-28">
-                    <Input 
-                      type="number" min={1} placeholder={t("Sell Price", "ရောင်းဈေး")}
-                      value={item.sellingPrice} onChange={e => updateFormItem(index, "sellingPrice", e.target.value)}
-                      className="h-9 text-xs" title="Selling Price"
-                    />
-                  </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeFormItem(index)} disabled={createLoading || formItems.length === 1} className="h-8 w-8 text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
               ))}
             </div>
@@ -631,41 +708,71 @@ export default function PurchasesPage() {
                 const formItem = receiveItems.find(i => i.id === item.id)
                 if (!formItem) return null
                 return (
-                  <div key={item.id} className="p-3 bg-muted/40 rounded-lg border border-border flex flex-col sm:flex-row gap-3 sm:items-center">
-                    <div className="flex-1">
-                      <div className="font-bold text-sm">{item.variant?.product?.name} - {item.variant?.name}</div>
-                      <div className="text-xs text-muted-foreground">{t("Ordered", "မှာယူထားသည်")}: {item.quantity} pcs @ {(item.unitCost ?? item.costPrice ?? 0).toLocaleString()} Ks</div>
+                  <div key={item.id} className="p-3 bg-muted/40 rounded-lg border border-border flex flex-col gap-2">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-bold text-sm">{item.variant?.product?.name} - {item.variant?.name}</div>
+                        <div className="text-xs text-muted-foreground">{t("Ordered", "မှာယူထားသည်")}: {item.quantity} pcs @ {(item.unitCost ?? item.costPrice ?? 0).toLocaleString()} Ks</div>
+                      </div>
+                      <div className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
+                        <div className="space-y-1 w-20">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("Rcvd Qty", "လက်ခံ ရရှိအရေအတွက်")}</label>
+                          <Input 
+                            type="number" 
+                            className="h-8 text-sm" 
+                            value={formItem.quantity}
+                            onChange={e => updateReceiveItem(item.id, "quantity", e.target.value)}
+                            min={0}
+                          />
+                        </div>
+                        <div className="space-y-1 w-24">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("Cost (Ks)", "မူရင်းဈေး (ကျပ်)")}</label>
+                          <Input 
+                            type="number" 
+                            className="h-8 text-sm" 
+                            value={formItem.unitCost}
+                            onChange={e => updateReceiveItem(item.id, "unitCost", e.target.value)}
+                            min={0}
+                          />
+                        </div>
+                        <div className="space-y-1 w-28">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("Sell Price (Ks)", "ရောင်းဈေး (ကျပ်)")}</label>
+                          <Input 
+                            type="number" 
+                            className="h-8 text-sm text-primary font-bold" 
+                            value={formItem.sellingPrice}
+                            onChange={e => updateReceiveItem(item.id, "sellingPrice", e.target.value)}
+                            min={0}
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
-                      <div className="space-y-1 w-20">
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("Rcvd Qty", "လက်ခံ ရရှိအရေအတွက်")}</label>
-                        <Input 
-                          type="number" 
-                          className="h-8 text-sm" 
-                          value={formItem.quantity}
-                          onChange={e => updateReceiveItem(item.id, "quantity", e.target.value)}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-border/40">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase">{t("Markup", "အမြတ်")}:</span>
+                      {[10, 15, 20, 25, 30].map(pct => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => applyMarkupToReceive(item.id, pct)}
+                          className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-background hover:bg-primary hover:text-primary-foreground text-foreground border border-border transition-all shadow-xs active:scale-95 cursor-pointer"
+                          title={`Set selling price to +${pct}% of cost`}
+                        >
+                          +{pct}%
+                        </button>
+                      ))}
+                      <div className="inline-flex items-center gap-1 bg-background border border-border rounded-md px-1.5 py-0.5 shadow-xs">
+                        <input
+                          type="number"
+                          placeholder="%"
                           min={0}
+                          max={500}
+                          className="w-10 h-4 text-[10px] font-bold text-center bg-transparent border-0 p-0 focus:outline-none focus:ring-0"
+                          onChange={(e) => {
+                            const val = Number(e.target.value)
+                            if (val > 0) applyMarkupToReceive(item.id, val)
+                          }}
                         />
-                      </div>
-                      <div className="space-y-1 w-24">
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("Cost (Ks)", "မူရင်းဈေး (ကျပ်)")}</label>
-                        <Input 
-                          type="number" 
-                          className="h-8 text-sm" 
-                          value={formItem.unitCost}
-                          onChange={e => updateReceiveItem(item.id, "unitCost", e.target.value)}
-                          min={0}
-                        />
-                      </div>
-                      <div className="space-y-1 w-28">
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground">{t("Sell Price (Ks)", "ရောင်းဈေး (ကျပ်)")}</label>
-                        <Input 
-                          type="number" 
-                          className="h-8 text-sm text-primary font-bold" 
-                          value={formItem.sellingPrice}
-                          onChange={e => updateReceiveItem(item.id, "sellingPrice", e.target.value)}
-                          min={0}
-                        />
+                        <span className="text-[9px] text-muted-foreground font-semibold">%</span>
                       </div>
                     </div>
                   </div>
@@ -695,6 +802,11 @@ export default function PurchasesPage() {
               <div>
                 <p className="text-sm text-muted-foreground font-semibold">{t("Supplier", "ပေးသွင်းသူ")}</p>
                 <p className="font-bold">{viewOrder?.supplier.name}</p>
+                {viewOrder?.voucherNumber && (
+                  <div className="text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/10 px-2 py-1 rounded-md border border-amber-500/20 inline-flex items-center gap-1.5 mt-1.5">
+                    <span>{t("Voucher Number", "ဘောင်ချာနံပါတ်")}: <strong className="text-foreground">{viewOrder.voucherNumber}</strong></span>
+                  </div>
+                )}
                 {viewOrder?.branch && (
                   <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-1">
                     <Building2 className="h-4 w-4" />

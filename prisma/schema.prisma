@@ -173,7 +173,8 @@ model ProductVariant {
   product           Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   name              String // e.g. "Small", "Medium", "Large"
   barcode           String   @unique
-  lowStockThreshold Int      @default(10)
+  lowStockThreshold  Int      @default(10)
+  highStockThreshold Int?     @default(100)
   costPrice         Float    @default(0) // synchronized from the parent product
   price             Float    @default(0) // synchronized from the parent product
   createdAt         DateTime @default(now())

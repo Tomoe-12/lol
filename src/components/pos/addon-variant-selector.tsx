@@ -49,7 +49,7 @@ export function AddonVariantSelector({
         name: product.name,
         imageUrl: product.imageUrl,
         categoryId: product.categoryId,
-        price: product.price,
+        price: selectedVariant?.price || product.price,
       },
       selectedVariant,
       quantity,
@@ -59,7 +59,7 @@ export function AddonVariantSelector({
     onClose()
   }
 
-  const basePrice = product.price || 0
+  const basePrice = selectedVariant?.price || product.price || 0
   const totalPriceMMK = basePrice * quantity
 
   return (
@@ -70,7 +70,7 @@ export function AddonVariantSelector({
             <span>{t("Customize Item", "အော်ဒါပြင်ဆင်ရန်")}</span>
           </DialogTitle>
           <div className="text-sm text-muted-foreground font-semibold mt-1 flex justify-between">
-            <span>{product.name}</span>
+            <span>{product.name} {selectedVariant ? `(${selectedVariant.name})` : ""}</span>
             <span className="text-primary font-bold">{basePrice.toLocaleString()} Ks</span>
           </div>
         </DialogHeader>
@@ -85,7 +85,7 @@ export function AddonVariantSelector({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {product.variants.map((v) => {
                   const isSelected = selectedVariant?.id === v.id
-                  const variantPrice = product.price || 0
+                  const variantPrice = v.price || product.price || 0
                   const availableStock = v.stockLevels?.find((stock) => stock.branchId === activeBranchId)?.quantity || 0
                   const isOutOfStock = availableStock <= 0
                   return (

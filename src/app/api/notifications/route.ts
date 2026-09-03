@@ -24,7 +24,7 @@ export async function GET(request: Request) {
             prisma.stockLevel.findMany({
               where: effectiveBranchId ? { branchId: effectiveBranchId } : undefined,
               include: {
-                variant: { select: { id: true, name: true, barcode: true, lowStockThreshold: true, product: { select: { id: true, name: true } } } },
+                variant: { select: { id: true, name: true, barcode: true, lowStockThreshold: true, highStockThreshold: true, product: { select: { id: true, name: true } } } },
                 branch: { select: { id: true, name: true } },
               },
             }),
@@ -62,6 +62,26 @@ export async function GET(request: Request) {
             },
           }));
 
+        const maxStockAlerts = stockLevels
+          .filter((s) => {
+            const maxThreshold = s.variant.highStockThreshold ?? 100;
+            return maxThreshold > 0 && s.quantity >= maxThreshold;
+          })
+          .map((s) => ({
+            type: "HIGH_STOCK",
+            title: "Max Stock Alert",
+            message: `${s.variant.product.name} (${s.variant.name}) reached maximum stock capacity (${s.quantity} in stock, max limit ${s.variant.highStockThreshold ?? 100} at ${s.branch.name})`,
+            timestamp: new Date().toISOString(),
+            metadata: {
+              variantId: s.variant.id,
+              productId: s.variant.product.id,
+              barcode: s.variant.barcode || "N/A",
+              branchId: s.branchId,
+              quantity: s.quantity,
+              maxThreshold: s.variant.highStockThreshold ?? 100,
+            },
+          }));
+
         const auditAlerts = criticalLogs.map((l) => ({
           type: "CRITICAL_LOG",
           title: `Action: ${l.action}`,
@@ -74,6 +94,7 @@ export async function GET(request: Request) {
 
         const allNotifications = [
           ...lowStockAlerts,
+          ...maxStockAlerts,
           ...auditAlerts,
         ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 

@@ -57,6 +57,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
   const [splitCashMMK, setSplitCashMMK] = React.useState<string>("")
   const [splitNonCashMMK, setSplitNonCashMMK] = React.useState<string>("")
   const [splitMethod, setSplitMethod] = React.useState<"CARD" | "QR">("CARD")
+  const [debtPaidAmount, setDebtPaidAmount] = React.useState<string>("")
 
   // Reset state when opening
   React.useEffect(() => {
@@ -69,6 +70,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
       setCashReceivedMMK("")
       setSplitCashMMK("")
       setSplitNonCashMMK("")
+      setDebtPaidAmount("")
       setNote("")
       setReceiptEmail("")
       setIsWholesale(false)
@@ -156,6 +158,10 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
       const wholesalePayment = Number(wholesalePaid)
       if (!customerId || (wholesalePaid.trim() !== "" && !Number.isFinite(wholesalePayment))) return false
       if (wholesalePayment < 0 || wholesalePayment > totalMMK) return false
+    } else if (paymentMethod === "DEBT") {
+      const debtPaid = Number(debtPaidAmount || 0)
+      if (!customerId || (debtPaidAmount.trim() !== "" && !Number.isFinite(debtPaid))) return false
+      if (debtPaid < 0 || debtPaid >= totalMMK) return false
     } else if (paymentMethod === "CASH" && totalCashReceivedMMK < totalMMK) {
       return false
     } else if (paymentMethod === "SPLIT" && (splitCash < 0 || splitNonCash < 0 || totalSplitEntered > totalMMK || Math.abs(totalSplitEntered - totalMMK) > 1)) {
@@ -163,7 +169,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
     }
     if (isDelivery && (!deliveryCustomerName.trim() || !/^09\d{9}$/.test(deliveryPhone) || !deliveryAddress.trim())) return false
     return true
-  }, [activeBranchId, checkoutItems, customerId, deliveryAddress, deliveryCustomerName, deliveryPhone, finalOrderDiscount, isDelivery, isWholesale, items.length, paymentMethod, splitCash, splitNonCash, subtotal, totalCashReceivedMMK, totalDiscount, totalMMK, totalSplitEntered, wholesalePaid])
+  }, [activeBranchId, checkoutItems, customerId, debtPaidAmount, deliveryAddress, deliveryCustomerName, deliveryPhone, finalOrderDiscount, isDelivery, isWholesale, items.length, paymentMethod, splitCash, splitNonCash, subtotal, totalCashReceivedMMK, totalDiscount, totalMMK, totalSplitEntered, wholesalePaid])
 
   const handleSplitCashChange = (value: string) => {
     setSplitCashMMK(value)
@@ -267,6 +273,21 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
       setError("Wholesale payment must be between 0 and the sale total")
       return
     }
+    if (paymentMethod === "DEBT" && !customerId) {
+      setError(t("Please select or create a customer for credit / debt sale", "ကြွေးရောင်းရန် ဖောက်သည် အမည် ရွေးချယ် (သို့မဟုတ်) အသစ်ထည့်သွင်းပေးပါ"))
+      return
+    }
+    const debtPaid = parseFloat(debtPaidAmount) || 0
+    if (paymentMethod === "DEBT") {
+      if (debtPaid < 0) {
+        setError(t("Down payment cannot be negative", "စရန်ငွေသည် အနှုတ်မဖြစ်ရပါ"))
+        return
+      }
+      if (debtPaid >= totalMMK) {
+        setError(t("Down payment cannot equal or exceed the total order amount. Use Cash, Card, or QR for full payment.", "စရန်ငွေသည် စုစုပေါင်းထက် မများရပါ။ အပြည့်ပေးချေရန် Cash, Card သို့မဟုတ် QR ကို ရွေးပါ။"))
+        return
+      }
+    }
     if (!isWholesale && paymentMethod === "CASH" && totalCashReceivedMMK < totalMMK) {
       setError("Received cash is less than total amount / လက်ခံရရှိငွေ မလုံလောက်ပါ")
       return
@@ -309,7 +330,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
       currency: "MMK",
       exchangeRate: 1,
       paymentMethod,
-      cashReceived: isWholesale ? wholesalePayment : (paymentMethod === "CASH" ? totalCashReceivedMMK : (paymentMethod === "SPLIT" ? splitCash : null)),
+      cashReceived: isWholesale ? wholesalePayment : (paymentMethod === "DEBT" ? debtPaid : (paymentMethod === "CASH" ? totalCashReceivedMMK : (paymentMethod === "SPLIT" ? splitCash : null))),
       changeGiven: paymentMethod === "CASH" ? changeMMK : null,
       note: note || null,
       receiptEmail: receiptEmail || null,
@@ -319,6 +340,7 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
       deliveryAddress: isDelivery ? deliveryAddress : null,
       wholesaleSale: isWholesale,
       wholesalePaid: isWholesale ? wholesalePayment : undefined,
+      debtPaid: paymentMethod === "DEBT" ? debtPaid : undefined,
       customerId: customerId || undefined,
       items: checkoutItems,
     }
@@ -543,6 +565,78 @@ export function PaymentDialog({ isOpen, onClose, staffId, staffName, onSuccess }
                 <label className="text-xs font-bold uppercase text-muted-foreground">Amount paid now (0 = no pay)</label>
                 <Input type="number" min={0} max={totalMMK} value={wholesalePaid} onChange={(event) => { setWholesalePaid(event.target.value); setPaymentMethod(Number(event.target.value || 0) > 0 ? "CASH" : "DEBT") }} placeholder="0 Ks" />
                 <p className="text-xs text-muted-foreground">The sale completes immediately. Any unpaid balance appears in Outstanding.</p>
+              </div>
+            )}
+            {!isWholesale && paymentMethod === "DEBT" && (
+              <div className="space-y-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 dark:bg-amber-950/20">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-bold uppercase text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                    <HandCoins className="h-4 w-4" />
+                    {t("Credit Customer (Required)", "ကြွေးဝယ်ယူသူ (မဖြစ်မနေ လိုအပ်သည်)")} <span className="text-destructive">*</span>
+                  </label>
+                  {!customerId && (
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-xs font-semibold" onClick={() => setNewCustomerOpen(true)}>
+                      {t("+ New Customer", "+ ဖောက်သည်အသစ်")}
+                    </Button>
+                  )}
+                </div>
+                {!customerId && (
+                  <SearchableSelect
+                    items={customers}
+                    value={customerId}
+                    onChange={setCustomerId}
+                    placeholder={t("Select customer...", "ဖောက်သည် ရွေးချယ်ပါ...")}
+                    searchPlaceholder={t("Search customer by name or phone...", "ဖောက်သည် အမည် (သို့) ဖုန်းနံပါတ်ဖြင့် ရှာပါ...")}
+                    renderItem={(customer) => <span>{customer.name} {customer.phone ? `· ${customer.phone}` : ""}</span>}
+                    filterItem={(customer, search) => `${customer.name} ${customer.phone || ""} ${(customer.phones || []).join(" ")}`.toLowerCase().includes(search)}
+                  />
+                )}
+                {customerId && (
+                  <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 text-sm shadow-xs">
+                    <div className="min-w-0">
+                      <p className="font-bold text-foreground">{selectedCustomer?.name || "Customer selected"}</p>
+                      <p className="truncate text-xs text-muted-foreground">{selectedCustomer?.phone || selectedCustomer?.phones?.[0] || "No phone"} · {selectedCustomer?.email || "No email"}</p>
+                      {selectedCustomer?.address && <p className="truncate text-xs text-muted-foreground">{selectedCustomer.address}</p>}
+                    </div>
+                    <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setCustomerId("")}>{t("Change", "ပြောင်းမည်")}</Button>
+                  </div>
+                )}
+                {newCustomerOpen && (
+                  <div className="space-y-2.5 rounded-lg border border-border bg-card p-3 shadow-xs">
+                    <p className="text-xs font-bold uppercase text-muted-foreground">{t("Quick Add Customer", "ဖောက်သည်အသစ် ထည့်ရန်")}</p>
+                    <Input placeholder={t("Customer name *", "ဖောက်သည် အမည် *")} value={newCustomerName} onChange={(event) => setNewCustomerName(event.target.value)} className="h-9 text-xs" />
+                    <PhoneInput placeholder="09xxxxxxxxx *" value={newCustomerPhone} onChange={(event) => setNewCustomerPhone(event.target.value)} className="h-9 text-xs" />
+                    <Input type="email" placeholder={t("Email (optional)", "အီးမေးလ် (စိတ်ကြိုက်)")} value={newCustomerEmail} onChange={(event) => setNewCustomerEmail(event.target.value)} className="h-9 text-xs" />
+                    <Input placeholder={t("Address (optional)", "လိပ်စာ (စိတ်ကြိုက်)")} value={newCustomerAddress} onChange={(event) => setNewCustomerAddress(event.target.value)} className="h-9 text-xs" />
+                    <div className="flex justify-end gap-2 pt-1">
+                      <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setNewCustomerOpen(false)}>{t("Cancel", "မလုပ်တော့ပါ")}</Button>
+                      <Button type="button" size="sm" className="h-7 text-xs font-bold" onClick={() => void handleCreateCustomer()}>{t("Save Customer", "သိမ်းမည်")}</Button>
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold uppercase text-muted-foreground">{t("Down Payment (0 = Full Debt)", "စရန်ငွေ (၀ = အကြွေးသီးသန့်)")}</span>
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">
+                      {t("Remaining Debt", "ကျန်ငွေ")}: {Math.max(0, totalMMK - (parseFloat(debtPaidAmount) || 0)).toLocaleString()} Ks
+                    </span>
+                  </div>
+                  <Input 
+                    type="number" 
+                    min={0} 
+                    max={Math.max(0, totalMMK - 1)} 
+                    value={debtPaidAmount} 
+                    onChange={(event) => setDebtPaidAmount(event.target.value)} 
+                    placeholder="0 Ks" 
+                    className="h-10 text-sm font-bold bg-background border-border"
+                  />
+                  <p className="text-[11px] text-muted-foreground font-medium">
+                    {t(
+                      "This order will be recorded in Outstanding with the customer's remaining debt balance.",
+                      "ဤအရောင်းသည် ဖောက်သည်၏ ကျန်ရှိသော ကြွေးကျန်ပမာဏဖြင့် Outstanding စာရင်းထဲသို့ တိုက်ရိုက် ရောက်ရှိသွားပါမည်။"
+                    )}
+                  </p>
+                </div>
               </div>
             )}
             {!isWholesale && paymentMethod === "CASH" && (
