@@ -517,7 +517,7 @@ export default function InventoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-              {stockLevels.reduce((sum, s) => sum + (s.quantity > 0 ? s.quantity * (s.variant.product.price || 0) : 0), 0).toLocaleString()} Ks
+              {stockLevels.reduce((sum, s) => sum + (s.quantity > 0 ? s.quantity * (s.variant.price || s.variant.product.price || 0) : 0), 0).toLocaleString()} Ks
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">Potential total retail revenue</p>
           </CardContent>
@@ -766,7 +766,7 @@ export default function InventoryPage() {
                                 onClick={() => {
                                   setEditStock(s)
                                   setEditCostPrice(String(s.variant.costPrice || 0))
-                                  setEditSellingPrice(String(s.variant.product.price || 0))
+                                  setEditSellingPrice(String(s.variant.price || s.variant.product.price || 0))
                                   setAdjustQty("")
                                   setAdjustNote("")
                                   setAdjustType("ADD")

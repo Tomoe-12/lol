@@ -1,0 +1,261 @@
+<mxfile host="65bd71144e">
+    <diagram id="manager_db_flow" name="Manager Interface Flow">
+        <mxGraphModel dx="665" dy="307" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1600" background="#ffffff" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="m_start" value="Start" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;fontColor=#000000;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="30" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="m_login" value="Manager Login&#xa;(Email &amp; Password)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="515" y="100" width="170" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="m_valid" value="Valid?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="550" y="175" width="100" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="m_scope" value="System Restricts Scope to&#xa;Assigned Physical Branch" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="510" y="255" width="180" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="mi_hdr" value="1. Branch Inventory &amp; Stock Control" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="420" width="200" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="mi_inspect" value="Inspect Branch Stock Counts &amp;&#xa;Monitor Low Stock Badges" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="485" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="mi_action_chk" value="Operation Type?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="85" y="560" width="150" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="mi_adjust" value="Manual Stock Adjustment:&#xa;Enter Delta (+/-) &amp; Reason&#xa;(Damaged, Audit Correction)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="10" y="640" width="175" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="mi_transfer" value="Branch Stock Transfer:&#xa;Select Target Branch &amp; Qty&#xa;(Deduct Source, Add Target)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="195" y="640" width="170" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="mi_log" value="Atomically Mutate StockLevel &amp;&#xa;Record InventoryLog" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="725" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="mp_hdr" value="2. Purchase Orders &amp; Procurement" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="290" y="420" width="200" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="mp_draft" value="Draft PO: Select Supplier,&#xa;Add Items, Unit Cost &amp; Qty" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="485" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="mp_voucher" value="Record Supplier Tax Voucher &amp;&#xa;Set Expected Delivery Date" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="560" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="mp_receive" value="Inspect Received Shipment &amp;&#xa;Verify Physical Quantity vs Bill" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="635" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="mp_mac" value="Recalculate Moving Average Cost:&#xa;New Cost = [(Old Stock * Old Cost) +&#xa;(New Qty * Unit Cost)] / Total Stock" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="290" y="710" width="200" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="me_hdr" value="3. Branch Expense Ledger" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="420" width="170" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="me_record" value="Record Categorized Expense:&#xa;Rent, Utilities, Staff Salaries,&#xa;Store Supplies, Maintenance" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="485" width="170" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="me_summary" value="Review Monthly Branch Overhead &amp;&#xa;Calculate Operational Costs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="515" y="565" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="ms_hdr" value="4. Cashier Staff Supervision" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="720" y="420" width="180" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="ms_list" value="View Cashiers Assigned to Branch &amp;&#xa;Audit Cashier Shift Vouchers" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="720" y="485" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="ms_pin" value="Reset Cashier 4-Digit Quick PIN" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="725" y="560" width="170" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="ms_perm" value="Configure 11-Module R/W Matrix&#xa;(write: true =&gt; read: true)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="720" y="625" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="mr_hdr" value="5. Branch Sales Reports" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="930" y="420" width="170" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="mr_analytics" value="View Daily Branch Sales, Net Profit,&#xa;Payment Split &amp; Top Products" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="925" y="485" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="mr_export" value="Filter Date Ranges &amp;&#xa;Export Branch CSV Reports" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="930" y="560" width="170" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="m_db" value="Database" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1120" y="780" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="m_logout" value="Logout" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="990" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="m_end" value="End" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;fontColor=#000000;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="1060" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="me_start_login" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="m_start" target="m_login" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="me_login_valid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="m_login" target="m_valid" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="me_valid_no" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="m_valid" target="m_login" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="450" y="200"/>
+                            <mxPoint x="450" y="122"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="me_valid_yes" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="m_valid" target="m_scope" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="me_scope_menu" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="m_scope" target="4" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="600" y="325" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="me_db_out" value="Read / Load Data" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="m_db" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="710" y="840"/>
+                            <mxPoint x="710" y="355"/>
+                        </Array>
+                        <mxPoint x="685" y="355" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="me_m1" value="Inventory" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" target="mi_hdr" edge="1">
+                    <mxGeometry x="0.822" relative="1" as="geometry">
+                        <mxPoint x="540" y="350" as="sourcePoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="me_m2" value="Purchases" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="4" target="mp_hdr" edge="1">
+                    <mxGeometry x="0.7273" relative="1" as="geometry">
+                        <mxPoint x="515" y="355" as="sourcePoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="me_m3" value="Expenses" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" target="me_hdr" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="600" y="385" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="me_m4" value="Staff" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" target="ms_hdr" edge="1">
+                    <mxGeometry x="0.6834" relative="1" as="geometry">
+                        <mxPoint x="685" y="355" as="sourcePoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="me_m5" value="Reports" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" target="mr_hdr" edge="1">
+                    <mxGeometry x="0.8481" relative="1" as="geometry">
+                        <mxPoint x="685" y="355" as="sourcePoint"/>
+                        <Array as="points">
+                            <mxPoint x="690" y="355"/>
+                            <mxPoint x="690" y="330"/>
+                            <mxPoint x="1015" y="330"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="mie1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="mi_hdr" target="mi_inspect" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mie2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="mi_inspect" target="mi_action_chk" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mie_adj" value="Adjust" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="mi_action_chk" target="mi_adjust" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mie_xfer" value="Transfer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="mi_action_chk" target="mi_transfer" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mie_mrg1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="mi_adjust" target="mi_log" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mie_mrg2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="mi_transfer" target="mi_log" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mie_to_db" value="Update Stock" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="mi_log" target="m_db" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="160" y="820"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="mpe1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="mp_hdr" target="mp_draft" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mpe2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="mp_draft" target="mp_voucher" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mpe3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="mp_voucher" target="mp_receive" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mpe4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="mp_receive" target="mp_mac" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mpe_to_db" value="Update Cost &amp; Qty" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="mp_mac" target="m_db" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="390" y="840"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="mee1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="me_hdr" target="me_record" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mee2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="me_record" target="me_summary" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mee_to_db" value="Save Expense" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="me_summary" target="m_db" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="605" y="740"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="mse1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="ms_hdr" target="ms_list" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mse2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="ms_list" target="ms_pin" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mse3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="ms_pin" target="ms_perm" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mse_to_db" value="Save Matrix" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="ms_perm" target="m_db" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="810" y="820"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="mre1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="mr_hdr" target="mr_analytics" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mre2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="mr_analytics" target="mr_export" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mre_to_db" value="Query Data" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="mr_export" target="m_db" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1015" y="840"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="me_menu_logout" value="Logout" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="m_scope" target="m_logout" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="690" y="270"/>
+                            <mxPoint x="740" y="270"/>
+                            <mxPoint x="740" y="1010"/>
+                        </Array>
+                        <mxPoint x="685" y="355" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="m_logout_end" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="m_logout" target="m_end" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="&lt;span style=&quot;color: rgb(0, 0, 0); font-size: 11px;&quot;&gt;Select Manager&lt;/span&gt;&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); font-size: 11px;&quot;&gt;&lt;span style=&quot;color: rgb(0, 0, 0); font-size: 11px;&quot;&gt;Operational Module&lt;/span&gt;" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="540" y="320" width="120" height="60" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

@@ -69,7 +69,9 @@ async function fetchBranchInventory(branchId: string) {
           name: variant.name,
           barcode: variant.barcode,
           costPrice: variant.costPrice ?? 0,
-          price: product.price ?? 0,
+          // Retail price belongs to the variant. The product price is only a
+          // legacy fallback for older records that have no variant price.
+          price: variant.price ?? product.price ?? 0,
           lowStockThreshold: variant.lowStockThreshold,
           highStockThreshold: variant.highStockThreshold ?? 100,
           product: {

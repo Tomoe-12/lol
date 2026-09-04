@@ -389,8 +389,9 @@ export async function PATCH(request: Request) {
 
         // Fetch variant for each item to resolve productId for stock level
         for (const item of finalItems) {
-          const variant = await tx.productVariant.findUnique({ 
-            where: { id: item.variantId }
+          const variant = await tx.productVariant.findUnique({
+            where: { id: item.variantId },
+            include: { product: { include: { variants: { select: { id: true } } } } },
           });
           if (!variant) continue;
           
@@ -414,25 +415,28 @@ export async function PATCH(request: Request) {
             },
           });
 
-          await tx.product.update({
-            where: { id: variant.productId },
-            data: { costPrice: newCostPrice },
-          });
-          await tx.productVariant.updateMany({
-            where: { productId: variant.productId },
-            data: { costPrice: newCostPrice },
-          });
-
-          // Selling price is product-level: keep every variant at the same price.
-          if (item.sellingPrice !== undefined && item.sellingPrice > 0) {
+          // A product can have multiple variants with independent prices. Only
+          // update the variant represented by this purchase line. Keep the
+          // legacy product-level fields in sync only for single-variant products;
+          // for multi-variant products those fields cannot represent one price.
+          if (variant.product.variants.length === 1) {
             await tx.product.update({
               where: { id: variant.productId },
+              data: { costPrice: newCostPrice },
+            });
+          }
+
+          if (item.sellingPrice !== undefined && item.sellingPrice > 0) {
+            await tx.productVariant.update({
+              where: { id: variant.id },
               data: { price: item.sellingPrice },
             });
-            await tx.productVariant.updateMany({
-              where: { productId: variant.productId },
-              data: { price: item.sellingPrice },
-            });
+            if (variant.product.variants.length === 1) {
+              await tx.product.update({
+                where: { id: variant.productId },
+                data: { price: item.sellingPrice },
+              });
+            }
           }
 
           await tx.stockLevel.upsert({

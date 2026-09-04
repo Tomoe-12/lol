@@ -1,0 +1,222 @@
+<mxfile host="65bd71144e">
+    <diagram id="owner_db_flow" name="Owner Interface Flow">
+        <mxGraphModel dx="1443" dy="854" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1600" background="#ffffff" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="o_start" value="Start" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;fontColor=#000000;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="30" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="o_login" value="Enterprise Owner Login&#xa;(Master Credentials)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="515" y="100" width="170" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="o_valid" value="Valid?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="550" y="175" width="100" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="o_scope" value="System Grants Global Access:&#xa;All 4 Branches &amp; Master Setup" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="510" y="255" width="180" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="o_menu" value="Select Enterprise&#xa;Governance Module" style="shape=parallelogram;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="515" y="325" width="170" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="oa_hdr" value="1. Executive Analytics &amp; Reports" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="420" width="200" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="oa_kpi" value="View Consolidated Franchise KPIs:&#xa;Total Revenue, COGS, Net Profit,&#xa;Total Stock Valuation, Debtor Total" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="485" width="200" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="oa_compare" value="Compare Branch-by-Branch&#xa;Performance Trends &amp; Margins" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="570" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="oa_export" value="Export Comprehensive Financial &amp;&#xa;Transaction Audit Logs to CSV" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="65" y="645" width="190" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="oc_hdr" value="2. Master Catalog &amp; Pricing Rules" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="290" y="420" width="200" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="oc_crud" value="Create / Update Categories,&#xa;Products &amp; Variants Across Network" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="290" y="485" width="200" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="oc_pricing" value="Configure Barcodes, Retail Prices &amp;&#xa;Enforce Cost Price Floor Protection" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="290" y="560" width="200" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="oc_threshold" value="Set Franchise-Wide Low Stock&#xa;Alert Warning Thresholds" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="295" y="635" width="190" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="op_hdr" value="3. Supplier &amp; PO Network" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="420" width="170" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="op_supplier" value="Manage Registered Suppliers&#xa;&amp; Procurement Contacts" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="485" width="170" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="op_mac_audit" value="Audit Moving Average Cost (MAC)&#xa;Calculations Across Store Shipments" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="515" y="560" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="os_hdr" value="4. Enterprise Staff Governance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="720" y="420" width="180" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="os_accounts" value="Provision Managers &amp; Cashiers&#xa;Across All Physical Branches" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="720" y="485" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="os_rbac" value="Configure Master 11-Module RBAC&#xa;Permission Interlocking Matrices" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="720" y="560" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="os_audit" value="Inspect System-Wide AuditLog&#xa;(Checkouts, Refunds, Stock Deltas)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="720" y="635" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="ob_hdr" value="5. Master Setup &amp; Branch Provisioning" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="930" y="420" width="220" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="ob_branch" value="Provision New Store Branches,&#xa;Set Addresses &amp; Active Status" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="940" y="485" width="200" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="ob_receipt" value="Configure Custom Receipt Headers,&#xa;Footers &amp; Store Contact Info" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="940" y="560" width="200" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="ob_fx" value="Set Currency Exchange Rates&#xa;(MMK per 1 USD Conversion)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="945" y="635" width="190" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="o_db" value="Database" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="530" y="830" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="o_logout" value="Logout" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="940" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="o_end" value="End" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;fontColor=#000000;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="1010" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="oe_start_login" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="o_start" target="o_login" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oe_login_valid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="o_login" target="o_valid" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oe_valid_no" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="o_valid" target="o_login" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="450" y="200"/>
+                            <mxPoint x="450" y="122"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="oe_valid_yes" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="o_valid" target="o_scope" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oe_scope_menu" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="o_scope" target="o_menu" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oe_db_out" value="Read / Load Data" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="o_db" target="o_menu" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="710" y="790"/>
+                            <mxPoint x="710" y="355"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="oe_m1" value="Analytics" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="o_menu" target="oa_hdr" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oe_m2" value="Catalog" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="o_menu" target="oc_hdr" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oe_m3" value="Suppliers" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="o_menu" target="op_hdr" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oe_m4" value="Staff Admin" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="o_menu" target="os_hdr" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oe_m5" value="Master Setup" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="o_menu" target="ob_hdr" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oae1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="oa_hdr" target="oa_kpi" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oae2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="oa_kpi" target="oa_compare" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oae3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="oa_compare" target="oa_export" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oae_to_db" value="Query Financials" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="oa_export" target="o_db" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="160" y="770"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="oce1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="oc_hdr" target="oc_crud" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oce2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="oc_crud" target="oc_pricing" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oce3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="oc_pricing" target="oc_threshold" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="oce_to_db" value="Save Catalog" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="oc_threshold" target="o_db" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="390" y="790"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="ope1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="op_hdr" target="op_supplier" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ope2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="op_supplier" target="op_mac_audit" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ope_to_db" value="Save Suppliers" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="op_mac_audit" target="o_db" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="605" y="700"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="ose1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="os_hdr" target="os_accounts" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ose2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="os_accounts" target="os_rbac" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ose3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="os_rbac" target="os_audit" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ose_to_db" value="Save Roles &amp; Audits" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="os_audit" target="o_db" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="810" y="770"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="obe1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="ob_hdr" target="ob_branch" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="obe2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="ob_branch" target="ob_receipt" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="obe3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="ob_receipt" target="ob_fx" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="obe_to_db" value="Save Config" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="ob_fx" target="o_db" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1040" y="790"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="oe_menu_logout" value="Logout" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=10;" parent="1" source="o_menu" target="o_logout" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1180" y="355"/>
+                            <mxPoint x="1180" y="960"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="o_logout_end" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#000000;strokeWidth=1.5;" parent="1" source="o_logout" target="o_end" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

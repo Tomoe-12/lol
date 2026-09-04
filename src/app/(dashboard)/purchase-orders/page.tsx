@@ -329,7 +329,7 @@ export default function PurchasesPage() {
       .map(i => {
         const unitCost = Number(i.unitCost) || 0
         const found = allVariants.find(v => v.id === i.variantId)
-        const defaultSell = found?.productPrice || found?.price || (unitCost > 0 ? Math.round(unitCost * 1.2) : 100)
+        const defaultSell = found?.price || found?.productPrice || (unitCost > 0 ? Math.round(unitCost * 1.2) : 100)
         const rawSell = Number(i.sellingPrice) || 0
         const sellingPrice = rawSell > 0 ? Math.max(rawSell, unitCost) : Math.max(defaultSell, unitCost)
         return {
@@ -810,6 +810,7 @@ export default function PurchasesPage() {
                 <div className="w-20 text-center">{t("Qty", "အရေအတွက်")}</div>
                 <div className="w-28 text-center">{t("Cost", "မူရင်းဈေး")} 
                   {newPaymentStatus !== "PAID" && <span className="font-normal">({t("Optional", "စိတ်ကြိုက်")})</span>}</div>
+                <div className="w-28 text-center">{t("Sell Price", "ရောင်းဈေး")}</div>
                 <div className="w-8"></div>
               </div>
               {formItems.map((item, index) => (
@@ -825,7 +826,7 @@ export default function PurchasesPage() {
                           if (found.costPrice !== undefined && found.costPrice > 0) {
                             updateFormItem(index, "unitCost", found.costPrice)
                           }
-                          const sell = found.productPrice || found.price || (found.costPrice ? Math.round(found.costPrice * 1.2) : 100)
+                          const sell = found.price || found.productPrice || (found.costPrice ? Math.round(found.costPrice * 1.2) : 100)
                           if (sell > 0) {
                             updateFormItem(index, "sellingPrice", sell)
                           }
@@ -859,6 +860,17 @@ export default function PurchasesPage() {
                       }} 
                       className="h-9 text-xs" 
                       title="Unit Cost" 
+                    />
+                  </div>
+                  <div className="w-full sm:w-28">
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder={t("Sell Price", "ရောင်းဈေး")}
+                      value={item.sellingPrice}
+                      onChange={e => updateFormItem(index, "sellingPrice", e.target.value)}
+                      className="h-9 text-xs"
+                      title="Selling Price"
                     />
                   </div>
                   <Button type="button" variant="ghost" size="icon" onClick={() => removeFormItem(index)} disabled={createLoading || formItems.length === 1} className="self-end sm:self-center h-8 w-8 text-destructive disabled:cursor-not-allowed disabled:opacity-50">

@@ -799,8 +799,8 @@ export default function ProductsPage() {
               <div className="flex gap-2 items-center px-1">
                 <label className="flex-1 text-[10px] font-bold text-muted-foreground uppercase">{t("Size / Name", "အမည် / အရွယ်အစား")}</label>
                 <label className="w-28 text-[10px] font-bold text-muted-foreground uppercase">{t("Barcode", "ဘားကုဒ်")}</label>
-                <label className="w-24 text-[10px] font-bold text-muted-foreground uppercase">{t("Cost (Ks)", "ဝယ်ရင်းဈေး")}</label>
-                <label className="w-24 text-[10px] font-bold text-muted-foreground uppercase">{t("Sell (Ks)", "ရောင်းဈေး")}</label>
+                {/* <label className="w-24 text-[10px] font-bold text-muted-foreground uppercase">{t("Cost (Ks)", "ဝယ်ရင်းဈေး")}</label> */}
+                {/* <label className="w-24 text-[10px] font-bold text-muted-foreground uppercase">{t("Sell (Ks)", "ရောင်းဈေး")}</label> */}
                 <label className="w-16 text-[10px] font-bold text-muted-foreground uppercase">{t("Min", "အနည်းဆုံး")}</label>
                 <label className="w-16 text-[10px] font-bold text-muted-foreground uppercase">{t("Max", "အများဆုံး")}</label>
                 <div className="w-8"></div>
@@ -822,7 +822,7 @@ export default function ProductsPage() {
                     onChange={(e) => updateVariantRow(i, "barcode", e.target.value)}
                     className="w-28 h-9 bg-muted/10 border-border text-xs font-semibold"
                   />
-                  <Input
+                  {/* <Input
                     type="number"
                     min={0}
                     placeholder="Cost"
@@ -830,8 +830,8 @@ export default function ProductsPage() {
                     onChange={(e) => updateVariantRow(i, "costPrice", Number(e.target.value))}
                     className="w-24 h-9 bg-muted/10 border-border text-xs font-semibold"
                     title={t("Cost Price for this variant", "ဤအမျိုးအစားအတွက် ဝယ်ရင်းဈေး")}
-                  />
-                  <Input
+                  /> */}
+                  {/* <Input
                     type="number"
                     min={0}
                     placeholder="Sell"
@@ -839,7 +839,7 @@ export default function ProductsPage() {
                     onChange={(e) => updateVariantRow(i, "price", Number(e.target.value))}
                     className="w-24 h-9 bg-muted/10 border-border text-xs font-bold text-primary"
                     title={t("Selling Price for this variant", "ဤအမျိုးအစားအတွက် ရောင်းဈေး")}
-                  />
+                  /> */}
                   <Input
                     type="number"
                     min={0}
